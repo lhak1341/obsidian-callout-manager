@@ -22,7 +22,7 @@ export class CreateCalloutPane extends UIPane {
 		this.plugin = plugin;
 		this.validity = new ValiditySet(ValiditySet.AllValid);
 
-		const btnCreate = (this.btnCreate = document.createElement('button'));
+		const btnCreate = (this.btnCreate = activeDocument.createElement('button'));
 		btnCreate.textContent = 'Create';
 		btnCreate.addEventListener('click', (evt) => {
 			if (!this.validity.valid) {
@@ -34,13 +34,13 @@ export class CreateCalloutPane extends UIPane {
 			this.nav.replace(new EditCalloutPane(this.plugin, id, false));
 		});
 
-		this.fieldId = new Setting(document.createElement('div'))
+		this.fieldId = new Setting(activeDocument.createElement('div'))
 			.setHeading()
-			.setName('Callout Name')
+			.setName('Callout name')
 			.setDesc('This is how you will refer to your callout in Markdown.')
 			.addText((cmp) => {
 				this.fieldIdComponent = cmp;
-				cmp.setPlaceholder('my-awesome-callout');
+				cmp.setPlaceholder('My-awesome-callout');
 
 				makeTextComponentValidateCalloutID(cmp, 'id', this.validity);
 			});

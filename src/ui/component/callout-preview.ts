@@ -47,7 +47,7 @@ export class CalloutPreviewComponent extends Component {
 		super();
 		const { color, icon, id, title, content } = options;
 
-		const frag = document.createDocumentFragment();
+		const frag = activeDocument.createDocumentFragment();
 
 		// Build the callout.
 		const calloutEl = (this.calloutEl = frag.createDiv({ cls: ['callout', 'calloutmanager-preview'] }));
@@ -176,7 +176,7 @@ export class IsolatedCalloutPreviewComponent extends CalloutPreviewComponent {
 	public constructor(containerEl: HTMLElement | DocumentFragment, options: IsolatedPreviewOptions) {
 		super(NO_ATTACH, options);
 
-		const frag = document.createDocumentFragment();
+		const frag = activeDocument.createDocumentFragment();
 		const focused = options.focused ?? false;
 		const colorScheme = options.colorScheme;
 		const readingView = (options.viewType ?? 'reading') === 'reading';
@@ -203,9 +203,11 @@ export class IsolatedCalloutPreviewComponent extends CalloutPreviewComponent {
 		//
 		// This is so we can keep the selectors consistent between real Obsidian and our fake one, without
 		// having those elements affect the display of the callout itself.
+		// eslint-disable-next-line obsidianmd/no-forbidden-elements -- required inside Shadow DOM; external CSS files cannot be loaded into a shadow root
 		shadowHead.createEl('style', { text: SHADOW_DOM_RESET_STYLES });
 
 		// Add a custom style element.
+		// eslint-disable-next-line obsidianmd/no-forbidden-elements -- required inside Shadow DOM; external CSS files cannot be loaded into a shadow root
 		this.customStyleEl = shadowHead.createEl('style', { attr: { 'data-custom-styles': 'true' } });
 
 		// Create a fake DOM tree inside the shadow body to host the callout.

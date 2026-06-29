@@ -26,23 +26,23 @@ export class ManagePluginPane extends UIPane {
 		// Navigation.
 		// -----------------------------------------------------------------------------------------------------
 		new Setting(containerEl)
-			.setName('Manage Callouts')
+			.setName('Manage callouts')
 			.setDesc('Create or edit Markdown callouts.')
 			.addButton((btn) => {
-				btn.setButtonText('Manage Callouts');
+				btn.setButtonText('Manage callouts');
 				btn.onClick(() => this.nav.open(new ManageCalloutsPane(plugin)));
 			});
 
 		// -----------------------------------------------------------------------------------------------------
 		// Section: Callout Detection
 		// -----------------------------------------------------------------------------------------------------
-		new Setting(containerEl).setHeading().setName('Callout Detection');
+		new Setting(containerEl).setHeading().setName('Callout detection');
 
 		new Setting(containerEl)
 			.setName('Obsidian')
 			.setDesc(
 				(() => {
-					const desc = document.createDocumentFragment();
+					const desc = activeDocument.createDocumentFragment();
 					const container = desc.createDiv();
 					const method = plugin.cssWatcher.describeObsidianFetchMethod();
 
@@ -88,17 +88,17 @@ export class ManagePluginPane extends UIPane {
 		// -----------------------------------------------------------------------------------------------------
 		new Setting(containerEl)
 			.setHeading()
-			.setName("What's New")
+			.setName("What's new")
 			.setDesc(`Version ${this.plugin.manifest.version}`)
 			.addExtraButton((btn) => {
 				btn.setIcon('lucide-more-horizontal')
-					.setTooltip('More Changelogs')
+					.setTooltip('More changelogs')
 					.onClick(() => this.nav.open(new ChangelogPane(plugin)));
 			});
 
 		const latestChanges = getSections(this.root).get(this.plugin.manifest.version);
 		if (latestChanges != null) {
-			const desc = document.createDocumentFragment();
+			const desc = activeDocument.createDocumentFragment();
 			desc.appendChild(latestChanges.contentsEl);
 
 			new Setting(containerEl)
@@ -113,7 +113,7 @@ export class ManagePluginPane extends UIPane {
 		new Setting(containerEl).setHeading().setName('Export');
 
 		new Setting(containerEl)
-			.setName('Callout Styles')
+			.setName('Callout styles')
 			.setDesc('Export your custom callouts and changes as CSS.')
 			.addButton((btn) => {
 				btn.setButtonText('Copy');
@@ -123,7 +123,7 @@ export class ManagePluginPane extends UIPane {
 					try {
 						await navigator.clipboard.writeText('/* Exported Styles from Obsidian Callout Manager */\n' + this.plugin.cssApplier.css)
 						btn.setButtonText("Copied!");
-					} catch (ex) {
+					} catch {
 						btn.setButtonText("Error");
 					}
 				});
@@ -135,7 +135,7 @@ export class ManagePluginPane extends UIPane {
 		new Setting(containerEl).setHeading().setName('Reset');
 
 		new Setting(containerEl)
-			.setName('Reset Callout Settings')
+			.setName('Reset callout settings')
 			.setDesc('Reset all the changes you made to callouts.')
 			.addButton(
 				withConfirm((btn) => {
@@ -151,7 +151,7 @@ export class ManagePluginPane extends UIPane {
 			);
 
 		new Setting(containerEl)
-			.setName('Reset Custom Callouts')
+			.setName('Reset custom callouts')
 			.setDesc('Removes all the custom callouts you created.')
 			.addButton(
 				withConfirm((btn) => {

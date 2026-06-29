@@ -47,7 +47,7 @@ export class MiscEditor {
 		if (callout.sources.length !== 1 || callout.sources[0].type !== 'custom') return null;
 
 		const validity = new ValiditySet(ValiditySet.AllValid);
-		const desc = document.createDocumentFragment();
+		const desc = activeDocument.createDocumentFragment();
 		desc.createEl('p', { text: 'Change the name of this callout.' });
 		desc.createEl('p', { text: 'This will not update any references in your notes!', cls: 'mod-warning' });
 

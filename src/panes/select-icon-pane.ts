@@ -134,7 +134,7 @@ export class SelectIconPane extends UIPane<void> {
 		const { containerEl } = this;
 
 		// Add the icons.
-		const gridEl = document.createDocumentFragment().createDiv({ cls: 'calloutmanager-icon-picker' });
+		const gridEl = activeDocument.createDocumentFragment().createDiv({ cls: 'calloutmanager-icon-picker' });
 		for (const icon of this.searchResults) {
 			if (icon.component == null) {
 				icon.component = new IconPreviewComponent(gridEl).setIcon(icon.id).componentEl;
@@ -146,7 +146,7 @@ export class SelectIconPane extends UIPane<void> {
 		// Add a delegated click listener.
 		gridEl.addEventListener('click', ({ targetNode }) => {
 			for (; targetNode != null && targetNode !== gridEl; targetNode = targetNode.parentElement) {
-				if (!(targetNode instanceof HTMLElement)) continue;
+				if (!(targetNode.instanceOf(HTMLElement))) continue;
 				const iconId = targetNode.getAttribute('data-icon-id');
 				if (iconId != null) {
 					recentIcons.add(iconId);

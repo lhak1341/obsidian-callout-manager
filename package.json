@@ -11,6 +11,9 @@
 		"dev": "node esbuild.config.mjs",
 		"test": "jest",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && rollup -c rollup.config.mjs",
+		"build:plugin": "node esbuild.config.mjs production",
+		"deploy": "bun run build:plugin && bun run scripts/deploy.mjs",
+		"lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.ts'",
 		"format": "prettier -w src"
 	},
 	"keywords": [],
@@ -20,9 +23,10 @@
 	},
 	"license": "MIT",
 	"obsidianPlugin": {
+		"id": "callout-manager",
 		"name": "Callout Manager",
-		"minAppVersion": "1.0.0",
-		"description": "Easily create and customize callouts.",
+		"minAppVersion": "1.4.4",
+		"description": "Easily create and customize callouts. (lhak fork: debounced reapply on layout-change, debounced search, click handler cache)",
 		"isDesktopOnly": false
 	},
 	"dependencies": {
@@ -35,11 +39,12 @@
 		"@rollup/plugin-typescript": "^11.0.0",
 		"@trivago/prettier-plugin-sort-imports": "^4.0.0",
 		"@types/node": "^16.11.6",
-		"@typescript-eslint/eslint-plugin": "5.29.0",
-		"@typescript-eslint/parser": "5.29.0",
+		"@typescript-eslint/eslint-plugin": "^8",
+		"@typescript-eslint/parser": "^8",
 		"builtin-modules": "3.3.0",
 		"esbuild": "0.17.3",
 		"esbuild-plugin-alias": "^0.2.1",
+		"eslint-plugin-obsidianmd": "^0.3.0",
 		"jest": "^29.4.2",
 		"obsidian": "latest",
 		"obsidian-undocumented": "^0.1.2",

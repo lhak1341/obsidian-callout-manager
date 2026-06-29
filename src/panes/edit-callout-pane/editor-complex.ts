@@ -33,7 +33,7 @@ export default class ComplexAppearanceEditor extends AppearanceEditor<ComplexApp
 
 		let resetButtonClicked = false;
 		const resetButton = new ButtonComponent(containerEl)
-			.setButtonText('Reset Callout')
+			.setButtonText('Reset callout')
 			.setClass('calloutmanager-edit-callout-appearance-reset')
 			.setWarning()
 			.onClick(() => {

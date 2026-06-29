@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'fs/promises';
 import { dirname, join, relative } from 'path';
 import { cwd } from 'process';
-import sass from 'sass';
+import * as sass from 'sass';
 import sorcery from 'sorcery';
 import { SourceMapGenerator } from 'source-map';
 import ts from 'typescript';

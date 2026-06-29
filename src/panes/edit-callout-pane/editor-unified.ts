@@ -39,7 +39,7 @@ export default class UnifiedAppearanceEditor extends AppearanceEditor<UnifiedApp
 			.onChange((color) => setAppearance({ type: 'unified', otherChanges, color }));
 
 		new Setting(containerEl)
-			.setName(`Color Scheme`)
+			.setName("Color scheme")
 			.setDesc(`Change the color of the callout for the ${otherColorScheme} color scheme.`)
 			.addButton((btn) =>
 				btn

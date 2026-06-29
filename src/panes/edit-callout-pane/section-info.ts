@@ -8,10 +8,10 @@ import { RGB, toHexRGB } from '&color';
 import DefaultColors from "../../default_colors.json";
 
 export function renderInfo(app: App, callout: Callout, containerEl: HTMLElement): void {
-	const frag = document.createDocumentFragment();
+	const frag = activeDocument.createDocumentFragment();
 	const contentEl = frag.createDiv({ cls: 'calloutmanager-edit-callout-section' });
 
-	contentEl.createEl('h2', { text: 'About this Callout' });
+	contentEl.createEl('h2', { text: 'About this callout' });
 	contentEl.createEl('div', { cls: 'calloutmanager-edit-callout-info' }, (el) => {
 		el.appendText('The ');
 		el.createSpan({ cls: 'calloutmanager-edit-callout--callout-id', text: callout.id });

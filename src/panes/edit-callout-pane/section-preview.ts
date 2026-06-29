@@ -31,7 +31,7 @@ export class EditCalloutPanePreview {
 		this.plugin = plugin;
 
 		// Create the callout preview.
-		const frag = document.createDocumentFragment();
+		const frag = activeDocument.createDocumentFragment();
 		this.sectionEl = frag.createDiv({
 			cls: ['calloutmanager-preview-container', 'calloutmanager-edit-callout-preview'],
 		});
@@ -91,7 +91,7 @@ export class EditCalloutPanePreview {
 
 		if (window.document.contains(this.sectionEl)) {
 			const icon = window.getComputedStyle(calloutEl).getPropertyValue('--callout-icon').trim();
-			const iconSvg = getIcon(icon) ?? document.createElement('svg');
+			const iconSvg = getIcon(icon) ?? activeDocument.createElement('svg');
 
 			iconEl.empty();
 			iconEl.appendChild(iconSvg);
@@ -111,7 +111,7 @@ export class EditCalloutPanePreview {
 
 		try {
 			await MarkdownRenderer.renderMarkdown(markdown, contentEl, '', undefined as unknown as Component);
-		} catch (ex) {
+		} catch {
 			contentEl.createEl('code').createEl('pre', { text: markdown });
 		}
 	}

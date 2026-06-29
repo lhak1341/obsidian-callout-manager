@@ -28,6 +28,8 @@ export class ManageCalloutsPane extends UIPane {
 	private setSearchError: undefined | ((message: string | false) => void);
 	private searchErrorDiv: HTMLElement;
 	private searchErrorQuery!: HTMLElement;
+	private _clickHandler?: (evt: MouseEvent) => void;
+	private _filterTimer?: ReturnType<typeof setTimeout>;
 
 	public constructor(plugin: CalloutManagerPlugin) {
 		super();
@@ -77,7 +79,7 @@ export class ManageCalloutsPane extends UIPane {
 		let id = null;
 		let action = null;
 		for (let target = evt.targetNode; target != null && (id == null || action == null); target = target?.parentElement) {
-			if (!(target instanceof Element)) continue;
+			if (!(target.instanceOf(Element))) continue;
 
 			// Find the callout ID.
 			if (id == null) {
@@ -120,8 +122,9 @@ export class ManageCalloutsPane extends UIPane {
 	/** @override */
 	public display(): void {
 		// Create a content element to render into.
-		const contentEl = document.createDocumentFragment().createDiv();
-		contentEl.addEventListener('click', this.onCalloutButtonClick.bind(this));
+		const contentEl = activeDocument.createDocumentFragment().createDiv();
+		if (!this._clickHandler) this._clickHandler = this.onCalloutButtonClick.bind(this);
+		contentEl.addEventListener('click', this._clickHandler);
 
 		// Render the previews.
 		const { callouts } = this;
@@ -147,7 +150,7 @@ export class ManageCalloutsPane extends UIPane {
 		const filter = new TextComponent(controlsEl)
 			.setValue(this.searchQuery)
 			.setPlaceholder('Filter callouts...')
-			.onChange(this.search.bind(this));
+			.onChange(query => { window.clearTimeout(this._filterTimer); this._filterTimer = window.setTimeout(() => this.search(query), 120); });
 
 		this.setSearchError = (message) => {
 			filter.inputEl.classList.toggle('mod-error', !!message);
@@ -161,7 +164,7 @@ export class ManageCalloutsPane extends UIPane {
 		if (!this.viewOnly) {
 			new ButtonComponent(controlsEl)
 				.setIcon('lucide-plus')
-				.setTooltip('New Callout')
+				.setTooltip('New callout')
 				.onClick(() => this.nav.open(new CreateCalloutPane(this.plugin)))
 				.then(({ buttonEl }) => buttonEl.classList.add('clickable-icon'));
 		}
@@ -180,14 +183,14 @@ export class ManageCalloutsPane extends UIPane {
 
 function createPreviewFactory(viewOnly: boolean): (callout: Callout) => HTMLElement {
 	const editButtonContent =
-		(viewOnly ? getIcon('lucide-view') : getIcon('lucide-edit')) ?? document.createTextNode('Edit Callout');
+		(viewOnly ? getIcon('lucide-view') : getIcon('lucide-edit')) ?? activeDocument.createTextNode('Edit Callout');
 
 	const insertButtonContent =
 		(viewOnly ? getIcon('lucide-view') : getIcon('lucide-forward')) ??
-		document.createTextNode('Insert Callout');
+		activeDocument.createTextNode('Insert Callout');
 
 	return (callout) => {
-		const frag = document.createDocumentFragment();
+		const frag = activeDocument.createDocumentFragment();
 		const calloutContainerEl = frag.createDiv({
 			cls: ['calloutmanager-preview-container'],
 			attr: {
@@ -225,7 +228,7 @@ function createPreviewFactory(viewOnly: boolean): (callout: Callout) => HTMLElem
  */
 function createEmptySearchResultDiv(): { searchErrorDiv: HTMLElement; searchErrorQuery: HTMLElement } {
 	let searchErrorQuery!: HTMLElement;
-	const searchErrorDiv = document.createElement('div');
+	const searchErrorDiv = activeDocument.createElement('div');
 	searchErrorDiv.className = 'calloutmanager-centerbox';
 	const contentEl = searchErrorDiv.createDiv({ cls: 'calloutmanager-search-error' });
 
@@ -244,22 +247,22 @@ function createEmptySearchResultDiv(): { searchErrorDiv: HTMLElement; searchErro
 		el.createDiv({ text: 'Try searching:' });
 		el.createEl('ul', undefined, (el) => {
 			el.createEl('li', { text: 'By name: ' }, (el) => {
-				el.createEl('code', { text: 'warning' });
+				el.createEl('code', { text: 'Warning' });
 			});
 			el.createEl('li', { text: 'By icon: ' }, (el) => {
-				el.createEl('code', { text: 'icon:check' });
+				el.createEl('code', { text: 'Icon:check' });
 			});
 			el.createEl('li', { text: 'Built-in callouts: ' }, (el) => {
-				el.createEl('code', { text: 'from:obsidian' });
+				el.createEl('code', { text: 'From:Obsidian' });
 			});
 			el.createEl('li', { text: 'Theme callouts: ' }, (el) => {
-				el.createEl('code', { text: 'from:theme' });
+				el.createEl('code', { text: 'From:theme' });
 			});
 			el.createEl('li', { text: 'Snippet callouts: ' }, (el) => {
-				el.createEl('code', { text: 'from:my snippet' });
+				el.createEl('code', { text: 'From:my snippet' });
 			});
 			el.createEl('li', { text: 'Custom callouts: ' }, (el) => {
-				el.createEl('code', { text: 'from:custom' });
+				el.createEl('code', { text: 'From:custom' });
 			});
 		});
 	});

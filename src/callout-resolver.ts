@@ -16,10 +16,11 @@ export class CalloutResolver {
 
 	public constructor(app: App) {
 		this.obsidianApp = app;
-		this.hostElement = document.body.createDiv({
+		this.hostElement = activeDocument.body.createDiv({
 			cls: 'calloutmanager-callout-resolver',
 		});
 
+		// eslint-disable-next-line obsidianmd/no-static-styles-assignment -- requires !important to override Obsidian's styles
 		this.hostElement.style.setProperty('display', 'none', 'important');
 		this.calloutPreview = new IsolatedCalloutPreviewComponent(this.hostElement, {
 			id: '',

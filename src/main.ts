@@ -83,15 +83,20 @@ export default class CalloutManagerPlugin extends Plugin {
 			this.register(this.cssWatcher.watch());
 		});
 
-		// Register a listener for whenever the CSS changes.
+		// Register a listener for whenever the CSS changes or layout changes (e.g. floating windows open).
 		//   Since the styles for a callout can change, we need to reload the styles in the resolver.
 		//   It's also a good idea to reapply our own styles, since the color scheme or theme could have changed.
-		this.registerEvent(
-			this.app.workspace.on('css-change', () => {
+		//   Debounced to avoid redundant reapply calls when multiple events fire in quick succession.
+		let reapplyTimer: ReturnType<typeof setTimeout>;
+		const reapplyDebounced = () => {
+			window.clearTimeout(reapplyTimer);
+			reapplyTimer = window.setTimeout(() => {
 				this.calloutResolver.reloadStyles();
 				this.applyStyles();
-			}),
-		);
+			}, 50);
+		};
+		this.registerEvent(this.app.workspace.on('css-change', reapplyDebounced));
+		this.registerEvent(this.app.workspace.on('layout-change', reapplyDebounced));
 
 		// Register setting tab.
 		this.settingTab = new UISettingTab(this, () => new ManagePluginPane(this));
@@ -111,7 +116,7 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.apiReadySignal();
 
 		// Add a ribbon Icon
-		this.addRibbonIcon('lucide-gallery-vertical', 'Insert Callout', () => {
+		this.addRibbonIcon('lucide-gallery-vertical', 'Insert callout', () => {
 			this.settingTab.openWithPane(new ManageCalloutsPane(this));
 		});
 	}

@@ -49,7 +49,7 @@ export class EditCalloutPane extends UIPane {
 		this.previewSection = new EditCalloutPanePreview(plugin, this.callout, false);
 
 		// Create the misc editor.
-		this.miscEditorContainerEl = document.createElement('div');
+		this.miscEditorContainerEl = activeDocument.createElement('div');
 		this.miscEditorContainerEl.classList.add(
 			'calloutmanager-edit-callout-section',
 			'calloutmanager-edit-callout-section--noborder',
@@ -62,7 +62,7 @@ export class EditCalloutPane extends UIPane {
 		});
 
 		// Create the appearance editor.
-		this.appearanceEditorContainerEl = document.createElement('div');
+		this.appearanceEditorContainerEl = activeDocument.createElement('div');
 		this.appearanceEditorContainerEl.classList.add(
 			'calloutmanager-edit-callout-section',
 			'calloutmanager-edit-callout-appearance',
@@ -138,7 +138,7 @@ export class EditCalloutPane extends UIPane {
 		if (!this.viewOnly && callout.sources.length === 1 && callout.sources[0].type === 'custom') {
 			new ButtonComponent(controlsEl)
 				.setIcon('lucide-trash')
-				.setTooltip('Delete Callout')
+				.setTooltip('Delete callout')
 				.onClick(() => {
 					this.plugin.removeCustomCallout(callout.id);
 					this.nav.close();

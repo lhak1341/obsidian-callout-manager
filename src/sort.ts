@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Callout from '&callout';
 import { getColorFromCallout } from '&callout-util';
 import { HSV, toHSV } from '&color';
@@ -11,6 +11,7 @@ import { ArrayValues, Intersection } from './util/type-helpers';
  */
 export type Precomputed<T, C> = {
 	value: T;
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 	computed: C extends void ? {} : C;
 };
 

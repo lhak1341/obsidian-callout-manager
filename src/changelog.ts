@@ -10,7 +10,7 @@ interface ChangelogSection {
 }
 
 export function getSections(parent: Component): Map<string, ChangelogSection> {
-	const frag = document.createDocumentFragment();
+	const frag = activeDocument.createDocumentFragment();
 	const renderedEl = frag.createDiv();
 
 	// Render the markdown.
@@ -66,7 +66,7 @@ export function getSections(parent: Component): Map<string, ChangelogSection> {
 	};
 
 	for (let node = renderedEl.firstChild; node != null; node = node?.nextSibling) {
-		if (node instanceof HTMLHeadingElement && node.tagName === 'H1') {
+		if (node.instanceOf(HTMLHeadingElement) && node.tagName === 'H1') {
 			addPreviousSection();
 
 			heading = node;

@@ -49,13 +49,13 @@ export default class PerSchemeAppearanceEditor extends AppearanceEditor<PerSchem
 		const { colorDark, colorLight, otherChanges } = this.appearance;
 
 		new CalloutColorSetting(containerEl, callout)
-			.setName('Dark Color')
+			.setName('Dark color')
 			.setDesc('Change the color of the callout for the dark color scheme.')
 			.setColorString(colorDark)
 			.onChange((color) => this.setAppearanceOrChangeToUnified({ ...appearance, colorDark: color }));
 
 		new CalloutColorSetting(containerEl, callout)
-			.setName(`Light Color`)
+			.setName("Light color")
 			.setDesc(`Change the color of the callout for the light color scheme.`)
 			.setColorString(colorLight)
 			.onChange((color) => this.setAppearanceOrChangeToUnified({ ...appearance, colorLight: color }));

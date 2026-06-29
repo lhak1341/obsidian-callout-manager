@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { Comparator, Precomputed, combinedComparison } from '../sort';
 
 import { BitField } from './bitfield';
@@ -6,7 +5,7 @@ import { type NormalizationFunction } from './normalize';
 import { SealedSearch, Search, SearchOptions } from './search';
 import { type ColumnDescription, SearchIndex } from './search-index';
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 type NonStringValues = number | boolean | bigint | symbol | null | undefined | Function | void;
 type RecordWhereKeys<T, KeyIs> = { [K in keyof T as K extends KeyIs ? K : never]: T[K] };
 type RecordWhereValues<T, ValueIs> = { [K in keyof T as T[K] extends ValueIs ? K : never]: T[K] };
@@ -32,6 +31,7 @@ export type StringPropertyOrGetter<T> = keyof StringRecord<T> | PropertyGetter<T
 /**
  * Creates {@link Search} instances using the factory pattern.
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export class SearchFactory<T, Columns extends string | never = never, Extra extends object = {}> {
 	private columns: Array<{ name: Columns; getter: PropertyGetter<T>; desc: ColumnDescription }> = [];
 
