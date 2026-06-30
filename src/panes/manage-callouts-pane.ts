@@ -202,14 +202,10 @@ export class ManageCalloutsPane extends UIPane {
 			const setIconColor = (colorValue: string) => {
 				const raw = colorValue || callout.color;
 				const rgbColor = resolveToRgb(raw);
-				const svgEl = iconEl.querySelector('svg') as SVGElement | null;
-				const target = (svgEl as HTMLElement | null) ?? iconEl;
 				if (rgbColor) {
-					target.style.stroke = rgbColor;
-					target.style.color = rgbColor;
+					iconEl.style.setProperty('--calloutmanager-row-icon-color', rgbColor);
 				} else {
-					target.style.stroke = '';
-					target.style.color = '';
+					iconEl.style.removeProperty('--calloutmanager-row-icon-color');
 				}
 			};
 
@@ -416,6 +412,11 @@ declare const STYLES: `
 		display: inline-flex;
 		margin-right: 0.35em;
 		vertical-align: middle;
+
+		svg, .svg-icon {
+			stroke: var(--calloutmanager-row-icon-color);
+			color: var(--calloutmanager-row-icon-color);
+		}
 	}
 
 	.calloutmanager-row-name-input {

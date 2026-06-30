@@ -166,7 +166,6 @@ export class CalloutCollection {
 		if (!this.cached) return;
 		const callout = this.cacheById.get(id);
 		if (callout !== undefined) {
-			console.debug("Invalided Callout Cache:", id);
 			this.invalidated.add(callout);
 		}
 	}

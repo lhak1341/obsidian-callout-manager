@@ -18,18 +18,12 @@ export class CalloutManagerAPI_V1 implements CalloutManager<true> {
 		this.consumer = consumer;
 		this[emitter] = new Events();
 
-		if (consumer != null) {
-			console.debug('Created API V1 Handle:', { plugin: consumer.manifest.id });
-		}
 	}
 
 	/**
 	 * Called to destroy an API handle bound to a consumer.
 	 */
-	public [destroy]() {
-		const consumer = this.consumer as Plugin;
-		console.debug('Destroyed API V1 Handle:', { plugin: consumer.manifest.id });
-	}
+	public [destroy]() {}
 
 	/** @override */
 	public getCallouts(): Readonly<Callout>[] {

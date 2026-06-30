@@ -1,4 +1,4 @@
-import { App } from 'obsidian';
+import { App, Setting } from 'obsidian';
 import { getThemeManifest } from 'obsidian-extra';
 
 import { Callout, CalloutSource } from '&callout';
@@ -10,7 +10,7 @@ export function renderInfo(app: App, callout: Callout, containerEl: HTMLElement)
 	const frag = activeDocument.createDocumentFragment();
 	const contentEl = frag.createDiv({ cls: 'calloutmanager-edit-callout-section' });
 
-	contentEl.createEl('h2', { text: 'About this callout' });
+	new Setting(contentEl).setName('About this callout').setHeading();
 	contentEl.createEl('div', { cls: 'calloutmanager-edit-callout-info' }, (el) => {
 		el.appendText('The ');
 		el.createSpan({ cls: 'calloutmanager-edit-callout--callout-id', text: callout.id });

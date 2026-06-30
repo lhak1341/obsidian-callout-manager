@@ -102,7 +102,6 @@ export default class CalloutManagerPlugin extends Plugin {
 		// Use getCalloutProperties to resolve the callout's color and icon.
 		this.callouts = new CalloutCollection((id) => {
 			const { icon, color } = this.calloutResolver.getCalloutProperties(id);
-			console.debug('Resolved Callout:', id, { icon, color });
 			return {
 				id,
 				icon,
@@ -152,9 +151,11 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.api = new CalloutManagerAPIs(this);
 		this.apiReadySignal();
 
-		// Add a ribbon Icon
-		this.addRibbonIcon('lucide-gallery-vertical', 'Insert callout', () => {
-			this.settingTab.openWithPane(new ManageCalloutsPane(this));
+		// Defer UI elements that don't need to be ready before the workspace loads.
+		this.app.workspace.onLayoutReady(() => {
+			this.addRibbonIcon('lucide-gallery-vertical', 'Insert callout', () => {
+				this.settingTab.openWithPane(new ManageCalloutsPane(this));
+			});
 		});
 	}
 
@@ -287,32 +288,42 @@ export default class CalloutManagerPlugin extends Plugin {
 	 */
 	public applyStyles() {
 		const env = currentCalloutEnvironment(this.app);
-		const css = [DEFAULT_CALLOUT_COLORS_CSS];
 
-		for (const [id, settings] of Object.entries(this.settings.callouts.settings)) {
-			const aliases = this.settings.aliasGroups[id];
-			if (aliases?.length) {
-				// Canonical type: emit a multi-selector rule so its color
-				// automatically applies to all aliases that have no explicit color.
-				const styles = calloutSettingsToStyles(settings, env);
-				const colorStyle = styles.find((s) => s.startsWith('--callout-color'));
-				if (colorStyle) {
-					const selectors = [id, ...aliases]
-						.map((i) => `.callout[data-callout="${i}"]`)
-						.join(',\n');
-					css.push(`${selectors} {\n\t${colorStyle}\n}`);
-				}
-				// Still emit the canonical's full rule (icon etc.) on its own selector.
-				css.push(calloutSettingsToCSS(id, settings, env));
-			} else {
-				// Non-canonical or custom callout: emit normally.
-				css.push(calloutSettingsToCSS(id, settings, env));
+		// Build user-override CSS for all explicitly configured callouts.
+		const userOverrideCSS = Object.entries(this.settings.callouts.settings)
+			.map(([id, settings]) => calloutSettingsToCSS(id, settings, env))
+			.filter(Boolean);
+
+		// Pass 1: seed the resolver with defaults + user overrides so that
+		// getCalloutProperties(canonical) returns fully-resolved values.
+		this.calloutResolver.customStyleEl.textContent = [DEFAULT_CALLOUT_COLORS_CSS, ...userOverrideCSS].join('\n\n');
+
+		// Pass 2: for every alias group propagate both icon AND color from the
+		// canonical to each alias.  This works even when the canonical has no
+		// explicit user override, because we read from the resolver which already
+		// has Obsidian's native CSS applied.
+		const aliasPropagationCSS: string[] = [];
+		for (const [canonical, aliases] of Object.entries(this.settings.aliasGroups)) {
+			if (!aliases?.length) continue;
+			const { color, icon } = this.calloutResolver.getCalloutProperties(canonical);
+			if (!color && !icon) continue;
+
+			const styleLines: string[] = [];
+			if (color) styleLines.push(`--callout-color: ${color}`);
+			if (icon) styleLines.push(`--callout-icon: ${icon}`);
+			const styleBlock = styleLines.join(';\n\t');
+
+			for (const alias of aliases) {
+				aliasPropagationCSS.push(`.callout[data-callout="${alias}"] {\n\t${styleBlock}\n}`);
 			}
 		}
 
-		const stylesheet = css.join('\n\n');
-		this.cssApplier.css = stylesheet;
-		this.calloutResolver.customStyleEl.textContent = stylesheet;
+		// Final order: defaults → alias propagation → user overrides.
+		// Putting user overrides last means an alias with its own explicit setting
+		// still wins over what it inherited from the canonical.
+		const fullStylesheet = [DEFAULT_CALLOUT_COLORS_CSS, ...aliasPropagationCSS, ...userOverrideCSS].join('\n\n');
+		this.cssApplier.css = fullStylesheet;
+		this.calloutResolver.customStyleEl.textContent = fullStylesheet;
 	}
 
 	/**

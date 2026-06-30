@@ -4,9 +4,6 @@ import CalloutManagerPlugin from '&plugin';
 
 import { UIPane } from '&ui/pane';
 
-import { getSections } from '../changelog';
-
-import { ChangelogPane } from './changelog-pane';
 import { ManageCalloutsPane } from './manage-callouts-pane';
 
 export class ManagePluginPane extends UIPane {
@@ -32,30 +29,6 @@ export class ManagePluginPane extends UIPane {
 				btn.setButtonText('Manage callouts');
 				btn.onClick(() => this.nav.open(new ManageCalloutsPane(plugin)));
 			});
-
-		// -----------------------------------------------------------------------------------------------------
-		// Section: Changelog
-		// -----------------------------------------------------------------------------------------------------
-		new Setting(containerEl)
-			.setHeading()
-			.setName("What's new")
-			.setDesc(`Version ${this.plugin.manifest.version}`)
-			.addExtraButton((btn) => {
-				btn.setIcon('lucide-more-horizontal')
-					.setTooltip('More changelogs')
-					.onClick(() => this.nav.open(new ChangelogPane(plugin)));
-			});
-
-		const latestChanges = getSections(this.root).get(this.plugin.manifest.version);
-		if (latestChanges != null) {
-			const desc = activeDocument.createDocumentFragment();
-			desc.appendChild(latestChanges.contentsEl);
-
-			new Setting(containerEl)
-				.setDesc(desc)
-				.then((setting) => setting.controlEl.remove())
-				.then((setting) => setting.settingEl.classList.add('calloutmanager-latest-changes'));
-		}
 
 		// -----------------------------------------------------------------------------------------------------
 		// Section: Export
@@ -156,17 +129,3 @@ function withConfirm(callback: (btn: ButtonComponent) => any): (btn: ButtonCompo
 	};
 }
 
-declare const STYLES: `
-	.calloutmanager-latest-changes {
-		padding: var(--size-4-4);
-
-		.calloutmanager-changelog-section {
-			> :first-child { margin-top: 0; }
-			> :last-child { margin-bottom: 0; }
-		}
-
-		.callout {
-			background: none;
-		}
-	}
-`;

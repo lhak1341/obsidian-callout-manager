@@ -106,9 +106,9 @@ declare const STYLES: `
 		}
 	}
 
-	// The setting tab header.
+	// The setting tab header — hidden at root, shown when navigated into a sub-pane.
 	.calloutmanager-setting-tab-header {
-		display: flex;
+		display: none;
 		align-items: center;
 
 		// Padding to mimic the sizing of the '.vertical-tab-content'
@@ -125,6 +125,10 @@ declare const STYLES: `
 		body.is-phone & {
 			background-color: var(--background-primary);
 			margin-top: var(--modal-header-height);
+		}
+
+		&.calloutmanager-setting-tab-header--active {
+			display: flex;
 		}
 	}
 
@@ -195,6 +199,10 @@ declare const STYLES: `
 	.calloutmanager-setting-tab-title {
 		flex: 1 1 auto;
 		flex-wrap: nowrap;
+
+		&:empty {
+			display: none;
+		}
 
 		h2,
 		h3 {

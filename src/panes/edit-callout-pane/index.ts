@@ -1,4 +1,4 @@
-import { ButtonComponent } from 'obsidian';
+import { ButtonComponent, Setting } from 'obsidian';
 
 import { Callout, CalloutID } from '&callout';
 import { CalloutSettings } from '&callout-settings';
@@ -67,7 +67,7 @@ export class EditCalloutPane extends UIPane {
 			'calloutmanager-edit-callout-appearance',
 		);
 
-		this.appearanceEditorContainerEl.createEl('h2', { text: 'Appearance' });
+		new Setting(this.appearanceEditorContainerEl).setName('Appearance').setHeading();
 		this.appearanceEditorEl = this.appearanceEditorContainerEl.createDiv();
 
 		this.changeSettings(plugin.getCalloutSettings(id) ?? []);
@@ -197,11 +197,8 @@ declare const STYLES: `
 		}
 	}
 
-	.calloutmanager-edit-callout-section h2 {
+	.calloutmanager-edit-callout-section .setting-item-heading {
 		margin-bottom: 0.3em;
-		& + p {
-			margin-top: 0;
-		}
 	}
 
 	.calloutmanager-edit-callout-appearance {
