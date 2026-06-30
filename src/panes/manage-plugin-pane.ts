@@ -34,56 +34,6 @@ export class ManagePluginPane extends UIPane {
 			});
 
 		// -----------------------------------------------------------------------------------------------------
-		// Section: Callout Detection
-		// -----------------------------------------------------------------------------------------------------
-		new Setting(containerEl).setHeading().setName('Callout detection');
-
-		new Setting(containerEl)
-			.setName('Obsidian')
-			.setDesc(
-				(() => {
-					const desc = activeDocument.createDocumentFragment();
-					const container = desc.createDiv();
-					const method = plugin.cssWatcher.describeObsidianFetchMethod();
-
-					container.createDiv({
-						text: `Find built-in Obsidian callouts${method === '' ? '' : ' '}${method}.`,
-					});
-
-					return desc;
-				})(),
-			)
-			.addToggle((setting) => {
-				setting.setValue(plugin.settings.calloutDetection.obsidian).onChange((v) => {
-					plugin.settings.calloutDetection.obsidian = v;
-					plugin.saveSettings();
-					plugin.refreshCalloutSources();
-				});
-			});
-
-		new Setting(containerEl)
-			.setName('Theme')
-			.setDesc('Find theme-provided callouts.')
-			.addToggle((setting) => {
-				setting.setValue(plugin.settings.calloutDetection.theme).onChange((v) => {
-					plugin.settings.calloutDetection.theme = v;
-					plugin.saveSettings();
-					plugin.refreshCalloutSources();
-				});
-			});
-
-		new Setting(containerEl)
-			.setName('Snippet')
-			.setDesc('Find callouts in custom CSS snippets.')
-			.addToggle((setting) => {
-				setting.setValue(plugin.settings.calloutDetection.snippet).onChange((v) => {
-					plugin.settings.calloutDetection.snippet = v;
-					plugin.saveSettings();
-					plugin.refreshCalloutSources();
-				});
-			});
-
-		// -----------------------------------------------------------------------------------------------------
 		// Section: Changelog
 		// -----------------------------------------------------------------------------------------------------
 		new Setting(containerEl)
@@ -169,9 +119,6 @@ export class ManagePluginPane extends UIPane {
 						// Regenerate the callout styles.
 						this.plugin.callouts.custom.clear();
 						this.plugin.applyStyles();
-
-						// Regenerate the cache.
-						this.plugin.refreshCalloutSources();
 						btn.setButtonText('Reset').setDisabled(true);
 					});
 				}),

@@ -9,7 +9,6 @@ import { UIPane } from '&ui/pane';
 import { AppearanceEditor } from './appearance-editor';
 import { Appearance, determineAppearanceType } from './appearance-type';
 import ComplexAppearanceEditor from './editor-complex';
-import PerSchemeAppearanceEditor from './editor-per-scheme';
 import UnifiedAppearanceEditor from './editor-unified';
 import { MiscEditor } from './misc-editor';
 import { renderInfo } from './section-info';
@@ -174,7 +173,6 @@ export class EditCalloutPane extends UIPane {
 const APPEARANCE_EDITORS: Record<Appearance['type'], { new (): AppearanceEditor<Appearance> }> = {
 	complex: ComplexAppearanceEditor,
 	unified: UnifiedAppearanceEditor,
-	'per-scheme': PerSchemeAppearanceEditor,
 };
 
 declare const STYLES: `

@@ -1,6 +1,6 @@
 import { CalloutID } from '&callout';
 import { CalloutSettings } from './callout-settings';
-
+import { CALLOUT_ALIAS_GROUPS } from './callout-aliases';
 
 /**
  * The Callout Manager plugin settings.
@@ -10,15 +10,8 @@ export default interface Settings {
 		custom: string[];
 		settings: Record<CalloutID, CalloutSettings>;
 	};
-
-	calloutDetection: {
-		obsidian: boolean;
-		theme: boolean;
-		snippet: boolean;
-
-		/** @deprecated */
-		obsidianFallbackForced?: boolean;
-	};
+	/** Maps a canonical callout ID to the list of aliases that inherit its color. */
+	aliasGroups: Record<string, string[]>;
 }
 
 /**
@@ -26,34 +19,28 @@ export default interface Settings {
  */
 export function defaultSettings(): Settings {
 	return {
-		callouts: {
-			custom: [],
-			settings: {},
-		},
-		calloutDetection: {
-			obsidian: true,
-			theme: true,
-			snippet: true,
-		},
+		callouts: { custom: [], settings: {} },
+		aliasGroups: Object.fromEntries(
+			Object.entries(CALLOUT_ALIAS_GROUPS).map(([k, v]) => [k, [...v]]),
+		),
 	};
 }
 
 /**
  * Migrates settings.
  *
- * @param into The object to merge into.
- * @param from The settings to add.
+ * @param into The object to migrate into.
+ * @param from The settings to migrate from.
  * @returns The merged settings.
  */
 export function migrateSettings(into: Settings, from: Settings | undefined) {
-	const merged = Object.assign(into, {
+	return Object.assign(into, {
 		...from,
-		calloutDetection: {
-			...into.calloutDetection,
-			...(from?.calloutDetection ?? {}),
+		callouts: {
+			...into.callouts,
+			...(from?.callouts ?? {}),
 		},
+		// Preserve user's alias customisations; fall back to defaults on first run.
+		aliasGroups: from?.aliasGroups ?? into.aliasGroups,
 	});
-
-	delete merged.calloutDetection.obsidianFallbackForced;
-	return merged;
 }

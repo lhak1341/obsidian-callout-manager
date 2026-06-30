@@ -1,22 +1,16 @@
-import { Setting } from 'obsidian';
-import { getCurrentColorScheme } from 'obsidian-extra';
-
 import { CalloutSettings } from '&callout-settings';
 
 import { CalloutColorSetting } from '&ui/setting/callout-color';
 import { CalloutIconSetting } from '&ui/setting/callout-icon';
 
 import { AppearanceEditor } from './appearance-editor';
-import { PerSchemeAppearance, UnifiedAppearance } from './appearance-type';
+import { UnifiedAppearance } from './appearance-type';
 
 export default class UnifiedAppearanceEditor extends AppearanceEditor<UnifiedAppearance> {
 	/** @override */
 	public toSettings(): CalloutSettings {
 		const { otherChanges, color } = this.appearance;
-		const changes = {
-			...otherChanges,
-			color: color,
-		};
+		const changes = { ...otherChanges, color };
 
 		if (color === undefined) {
 			delete changes.color;
@@ -29,32 +23,11 @@ export default class UnifiedAppearanceEditor extends AppearanceEditor<UnifiedApp
 		const { plugin, containerEl, callout, setAppearance } = this;
 		const { color, otherChanges } = this.appearance;
 
-		const colorScheme = getCurrentColorScheme(plugin.app);
-		const otherColorScheme = colorScheme === 'dark' ? 'light' : 'dark';
-
 		new CalloutColorSetting(containerEl, callout)
 			.setName('Color')
 			.setDesc('Change the color of the callout.')
 			.setColorString(color)
 			.onChange((color) => setAppearance({ type: 'unified', otherChanges, color }));
-
-		new Setting(containerEl)
-			.setName("Color scheme")
-			.setDesc(`Change the color of the callout for the ${otherColorScheme} color scheme.`)
-			.addButton((btn) =>
-				btn
-					.setClass('clickable-icon')
-					.setIcon('lucide-sun-moon')
-					.onClick(() => {
-						const currentColor = color ?? callout.color;
-						setAppearance({
-							type: 'per-scheme',
-							colorDark: currentColor,
-							colorLight: currentColor,
-							otherChanges,
-						} as PerSchemeAppearance);
-					}),
-			);
 
 		new CalloutIconSetting(containerEl, callout, plugin, () => this.nav)
 			.setName('Icon')

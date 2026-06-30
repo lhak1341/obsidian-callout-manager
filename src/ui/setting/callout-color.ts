@@ -18,6 +18,7 @@ export class CalloutColorSetting extends Setting {
 	private resetComponent!: ExtraButtonComponent;
 
 	private isDefault: boolean;
+	private cssVarColor: string | undefined;
 	private onChanged: ((value: string | undefined) => void) | undefined;
 
 	public constructor(containerEl: HTMLElement, callout: Callout) {
@@ -25,21 +26,34 @@ export class CalloutColorSetting extends Setting {
 		this.onChanged = undefined;
 		this.callout = callout;
 		this.isDefault = true;
+		this.cssVarColor = undefined;
 
-		// Create the setting archetype.
+		// Create the color picker.
 		this.addColorPicker((picker) => {
 			this.colorComponent = picker;
 			picker.onChange(() => {
+				if (this.cssVarColor !== undefined) return; // ignore picker when CSS var is active
 				const { r, g, b } = this.getColor();
 				this.onChanged?.(`${r}, ${g}, ${b}`);
 			});
 		});
 
 		this.dropdownComponent = new DropdownComponent(this.controlEl).then((dropdown) => {
-			// If the rgb string is in the default_colors keys, then change dropdown.
 			dropdown.addOptions(defaultColors);
 			dropdown.onChange((value: string) => {
-				this.setColorString(value);
+				this.isDefault = false;
+				if (value === '') {
+					// "Custom color..." selected — switch to picker mode
+					this.cssVarColor = undefined;
+					const { r, g, b } = this.getColor();
+					this.resetComponent.setDisabled(false).setTooltip('Reset Color');
+					this.onChanged?.(`${r}, ${g}, ${b}`);
+				} else {
+					// CSS variable selected — emit directly
+					this.cssVarColor = value;
+					this.resetComponent.setDisabled(false).setTooltip('Reset Color');
+					this.onChanged?.(value);
+				}
 			});
 		});
 
@@ -57,9 +71,10 @@ export class CalloutColorSetting extends Setting {
 
 	/**
 	 * Sets the color string.
-	 * This only accepts comma-delimited RGB values.
+	 * Accepts a CSS variable reference (e.g. `var(--color-blue)`), a comma-delimited
+	 * RGB value (e.g. `255, 10, 25`), or undefined to reset to the callout default.
 	 *
-	 * @param color The color (e.g. `255, 10, 25`) or undefined to reset the color to default.
+	 * @param color The color string or undefined to reset.
 	 * @returns `this`, for chaining.
 	 */
 	public setColorString(color: string | undefined): typeof this {
@@ -67,6 +82,20 @@ export class CalloutColorSetting extends Setting {
 			return this.setColor(undefined);
 		}
 
+		// CSS variable reference — show in dropdown, color picker shows the default as a hint
+		if (color.startsWith('var(')) {
+			this.isDefault = false;
+			this.cssVarColor = color;
+			const isKnown = Object.prototype.hasOwnProperty.call(defaultColors, color);
+			this.dropdownComponent.setValue(isKnown ? color : '');
+			this.resetComponent.setDisabled(false).setTooltip('Reset Color');
+			const fallback = getColorFromCallout(this.callout) ?? { r: 0, g: 0, b: 0 };
+			this.colorComponent.setValueRgb(fallback);
+			return this;
+		}
+
+		// Legacy comma-delimited RGB
+		this.cssVarColor = undefined;
 		return this.setColor(parseColorRGB(`rgb(${color})`) ?? { r: 0, g: 0, b: 0 });
 	}
 
@@ -78,25 +107,17 @@ export class CalloutColorSetting extends Setting {
 	 */
 	public setColor(color: RGB | undefined): typeof this {
 		const isDefault = (this.isDefault = color == null);
+		this.cssVarColor = undefined;
 		if (color == null) {
 			color = getColorFromCallout(this.callout) ?? { r: 0, g: 0, b: 0 };
 		}
 
-		// Convert color to Obsidian RGB format.
 		if (color instanceof Array) {
 			color = { r: color[0], g: color[1], b: color[2] };
 		}
 
-		// Update components.
 		this.colorComponent.setValueRgb(color);
-
-		// Update dropdown menu if it matches current color
-		if (`${color.r}, ${color.g}, ${color.b}` in defaultColors) {
-			this.dropdownComponent.setValue(`${color.r}, ${color.g}, ${color.b}`);
-		} else {
-			this.dropdownComponent.setValue('');
-		}
-
+		this.dropdownComponent.setValue('');
 		this.resetComponent.setDisabled(isDefault).setTooltip(isDefault ? '' : 'Reset Color');
 
 		return this;

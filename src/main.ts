@@ -8,16 +8,73 @@ import type { CalloutID, CalloutManager } from '../api';
 import { CalloutManagerAPIs } from './apis';
 import { CalloutCollection } from './callout-collection';
 import { CalloutResolver } from './callout-resolver';
-import { CalloutSettings, calloutSettingsToCSS, currentCalloutEnvironment } from './callout-settings';
-import { getCalloutsFromCSS } from './css-parser';
-import StylesheetWatcher, { ObsidianStylesheet, SnippetStylesheet, ThemeStylesheet } from './css-watcher';
+import { CalloutSettings, calloutSettingsToCSS, calloutSettingsToStyles, currentCalloutEnvironment } from './callout-settings';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import { ManagePluginPane } from './panes/manage-plugin-pane';
 import Settings, { defaultSettings, migrateSettings } from './settings';
 
+const DEFAULT_CALLOUT_COLORS_CSS = `
+.callout[data-callout='note'],
+.callout[data-callout='location'],
+.callout[data-callout='info'],
+.callout[data-callout='todo'] { --callout-color: var(--color-blue) }
+
+.callout[data-callout='abstract'],
+.callout[data-callout='summary'],
+.callout[data-callout='tldr'],
+.callout[data-callout='tip'],
+.callout[data-callout='hint'] { --callout-color: var(--color-cyan) }
+
+.callout[data-callout='pros'],
+.callout[data-callout='positive'],
+.callout[data-callout='practice'],
+.callout[data-callout='success'],
+.callout[data-callout='check'],
+.callout[data-callout='done'] { --callout-color: var(--color-green) }
+
+.callout[data-callout='recipe'],
+.callout[data-callout='cue'],
+.callout[data-callout='question'],
+.callout[data-callout='faq'],
+.callout[data-callout='help'],
+.callout[data-callout='idea'],
+.callout[data-callout='win'],
+.callout[data-callout='reward'] { --callout-color: var(--color-yellow) }
+
+.callout[data-callout='warning'],
+.callout[data-callout='caution'],
+.callout[data-callout='attention'],
+.callout[data-callout='reminder'] { --callout-color: var(--color-orange) }
+
+.callout[data-callout='favorite'],
+.callout[data-callout='bookmark'],
+.callout[data-callout='important'] { --callout-color: var(--color-pink) }
+
+.callout[data-callout='cons'],
+.callout[data-callout='negative'],
+.callout[data-callout='failure'],
+.callout[data-callout='fail'],
+.callout[data-callout='missing'],
+.callout[data-callout='danger'],
+.callout[data-callout='error'],
+.callout[data-callout='debug'],
+.callout[data-callout='bug'] { --callout-color: var(--color-red) }
+
+.callout[data-callout='event'],
+.callout[data-callout='reference'],
+.callout[data-callout='example'] { --callout-color: var(--color-purple) }
+
+.callout[data-callout='cite'],
+.callout[data-callout='file'],
+.callout[data-callout='attachment'],
+.callout[data-callout='url'],
+.callout[data-callout='link'],
+.callout[data-callout='navi'],
+.callout[data-callout='palette'] { --callout-color: var(--callout-quote) }
+`.trim();
+
 export default class CalloutManagerPlugin extends Plugin {
 	public settings!: Settings;
-	public cssWatcher!: StylesheetWatcher;
 	public cssApplier!: CustomStyleSheet;
 
 	public calloutResolver!: CalloutResolver;
@@ -63,31 +120,11 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.register(this.cssApplier);
 		this.applyStyles();
 
-		// Create the stylesheet watcher.
-		// This will let us update the callout collection whenever any styles change.
-		this.cssWatcher = new StylesheetWatcher(this.app);
-		this.cssWatcher.on('add', this.updateCalloutSource.bind(this));
-		this.cssWatcher.on('change', this.updateCalloutSource.bind(this));
-		this.cssWatcher.on('remove', this.removeCalloutSource.bind(this));
-		this.cssWatcher.on('checkComplete', () => {
-			this.ensureChangedCalloutsKnown();
-		});
-
-		this.cssWatcher.on('checkComplete', (anyChanges) => {
-			if (anyChanges) {
-				this.api.emitEventForCalloutChange();
-			}
-		});
-
-		this.app.workspace.onLayoutReady(() => {
-			this.register(this.cssWatcher.watch());
-		});
-
 		// Register a listener for whenever the CSS changes or layout changes (e.g. floating windows open).
 		//   Since the styles for a callout can change, we need to reload the styles in the resolver.
 		//   It's also a good idea to reapply our own styles, since the color scheme or theme could have changed.
 		//   Debounced to avoid redundant reapply calls when multiple events fire in quick succession.
-		let reapplyTimer: ReturnType<typeof setTimeout>;
+		let reapplyTimer = 0;
 		const reapplyDebounced = () => {
 			window.clearTimeout(reapplyTimer);
 			reapplyTimer = window.setTimeout(() => {
@@ -127,73 +164,6 @@ export default class CalloutManagerPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-
-	/**
-	 * Takes in a stylesheet from the watcher and updates the callout collection.
-	 * @param ss The stylesheet.
-	 */
-	protected updateCalloutSource(ss: ThemeStylesheet | ObsidianStylesheet | SnippetStylesheet): void {
-		const callouts = getCalloutsFromCSS(ss.styles);
-		const { calloutDetection } = this.settings;
-
-		switch (ss.type) {
-			case 'obsidian':
-				if (calloutDetection.obsidian === true && !calloutDetection.obsidianFallbackForced) {
-					callouts.push('note'); // Explicitly add "note", which isn't listed in `app.css`.
-					this.callouts.builtin.set(callouts);
-				}
-				return;
-
-			case 'theme':
-				if (calloutDetection.theme) {
-					this.callouts.theme.set(ss.theme, callouts);
-				}
-				return;
-
-			case 'snippet':
-				if (calloutDetection.snippet) {
-					this.callouts.snippets.set(ss.snippet, callouts);
-				}
-				return;
-		}
-	}
-
-	/**
-	 * Forces the callout sources to be refreshed.
-	 * This is used to re-detect the sources when settings are changed.
-	 */
-	public refreshCalloutSources(): void {
-		this.callouts.snippets.clear();
-		this.callouts.theme.delete();
-		this.callouts.builtin.set([]);
-
-		this.cssWatcher.checkForChanges(true).then(() => {
-			this.ensureChangedCalloutsKnown();
-		});
-	}
-
-	/**
-	 * Ensures that any callouts which have changed settings are detected by the plugin.
-	 *
-	 * If a non-builtin callout was configured by the user and then removed, this plugin should consider
-	 * the callout to be custom so it can be seen in the list.
-	 */
-	private ensureChangedCalloutsKnown(): void {
-		// Missing callouts that have been configured should be added as custom callouts.
-		let hasAddedCallout = false;
-		const { settings, callouts } = this;
-		for (const [id, changes] of Object.entries(settings.callouts.settings)) {
-			if (!callouts.has(id) && changes.length > 0) {
-				hasAddedCallout = true;
-				callouts.custom.add(id);
-			}
-		}
-
-		if (hasAddedCallout) {
-			this.saveCustomCallouts();
-			this.api.emitEventForCalloutChange();
-		}
 	}
 
 	private saveCustomCallouts(): Promise<void> {
@@ -317,37 +287,32 @@ export default class CalloutManagerPlugin extends Plugin {
 	 */
 	public applyStyles() {
 		const env = currentCalloutEnvironment(this.app);
+		const css = [DEFAULT_CALLOUT_COLORS_CSS];
 
-		// Generate the CSS.
-		const css = [];
 		for (const [id, settings] of Object.entries(this.settings.callouts.settings)) {
-			css.push(calloutSettingsToCSS(id, settings, env));
+			const aliases = this.settings.aliasGroups[id];
+			if (aliases?.length) {
+				// Canonical type: emit a multi-selector rule so its color
+				// automatically applies to all aliases that have no explicit color.
+				const styles = calloutSettingsToStyles(settings, env);
+				const colorStyle = styles.find((s) => s.startsWith('--callout-color'));
+				if (colorStyle) {
+					const selectors = [id, ...aliases]
+						.map((i) => `.callout[data-callout="${i}"]`)
+						.join(',\n');
+					css.push(`${selectors} {\n\t${colorStyle}\n}`);
+				}
+				// Still emit the canonical's full rule (icon etc.) on its own selector.
+				css.push(calloutSettingsToCSS(id, settings, env));
+			} else {
+				// Non-canonical or custom callout: emit normally.
+				css.push(calloutSettingsToCSS(id, settings, env));
+			}
 		}
 
-		// Apply the CSS.
 		const stylesheet = css.join('\n\n');
 		this.cssApplier.css = stylesheet;
 		this.calloutResolver.customStyleEl.textContent = stylesheet;
-	}
-
-	/**
-	 * Takes in a stylesheet from the watcher and removes its callouts from the callout collection.
-	 * @param ss The stylesheet.
-	 */
-	protected removeCalloutSource(ss: ThemeStylesheet | ObsidianStylesheet | SnippetStylesheet) {
-		switch (ss.type) {
-			case 'obsidian':
-				this.callouts.builtin.set([]);
-				return;
-
-			case 'theme':
-				this.callouts.theme.delete();
-				return;
-
-			case 'snippet':
-				this.callouts.snippets.delete(ss.snippet);
-				return;
-		}
 	}
 
 	/**

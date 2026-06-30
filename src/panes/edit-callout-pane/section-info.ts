@@ -5,7 +5,6 @@ import { Callout, CalloutSource } from '&callout';
 import { getColorFromCallout } from '&callout-util';
 import { RGB, toHexRGB } from '&color';
 
-import DefaultColors from "../../default_colors.json";
 
 export function renderInfo(app: App, callout: Callout, containerEl: HTMLElement): void {
 	const frag = activeDocument.createDocumentFragment();
@@ -105,15 +104,7 @@ function appendSourceInfo(app: App, el: HTMLElement, source: CalloutSource): boo
 }
 
 function describeColor(color: RGB): string {
-	const hexString = toHexRGB(color);
-	const rgbString = `${color.r}, ${color.g}, ${color.b}`;
-
-	const namedColor = DefaultColors.defaultColors[rgbString as keyof typeof DefaultColors.defaultColors];
-	if (namedColor != null) {
-		return namedColor;
-	}
-
-	return hexString;
+	return '#' + toHexRGB(color);
 }
 
 declare const STYLES: `
