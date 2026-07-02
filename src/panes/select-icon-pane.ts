@@ -1,6 +1,6 @@
 import { SearchResult, TextComponent, getIconIds, prepareFuzzySearch } from 'obsidian';
 
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../callout-store';
 
 import { IconPreviewComponent } from '&ui/component/icon-preview';
 import { UIPane, UIPaneTitle } from '&ui/pane';
@@ -14,7 +14,7 @@ const recentIcons: Set<string> = new Set();
  */
 export class SelectIconPane extends UIPane<void> {
 	public readonly title: UIPaneTitle;
-	private plugin: CalloutManagerPlugin;
+	private plugin: CalloutStore;
 
 	private searchQuery: string;
 	private searchResults: IconForSearch[];
@@ -28,7 +28,7 @@ export class SelectIconPane extends UIPane<void> {
 	private compareIcons: (a: IconForSearch, b: IconForSearch) => number;
 
 	public constructor(
-		plugin: CalloutManagerPlugin,
+		plugin: CalloutStore,
 		title: UIPaneTitle,
 		options: { limit?: number; onChoose: (icon: string) => void },
 	) {
@@ -44,7 +44,7 @@ export class SelectIconPane extends UIPane<void> {
 		this.searchResults = [];
 
 		// Generate suggestions based on what other callouts are using.
-		const usedIconIds = new Set(plugin.callouts.values().map((c) => c.icon));
+		const usedIconIds = new Set(plugin.getCallouts().map((c) => c.icon));
 		const usedIcons = (this.usedIcons = new Map());
 
 		// Create an easily-searchable list of icons.

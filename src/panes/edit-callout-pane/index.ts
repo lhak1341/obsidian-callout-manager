@@ -2,7 +2,7 @@ import { ButtonComponent, Setting } from 'obsidian';
 
 import { Callout, CalloutID } from '&callout';
 import { CalloutSettings } from '&callout-settings';
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../../callout-store';
 
 import { UIPane } from '&ui/pane';
 
@@ -19,7 +19,7 @@ const IMPOSSIBLE_CALLOUT_ID = '[not a real callout]';
 export class EditCalloutPane extends UIPane {
 	public readonly title;
 	private readonly viewOnly: boolean;
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly plugin: CalloutStore;
 
 	private callout: Callout;
 
@@ -31,14 +31,14 @@ export class EditCalloutPane extends UIPane {
 	private miscEditorContainerEl: HTMLElement;
 	private appearance!: Appearance;
 
-	public constructor(plugin: CalloutManagerPlugin, id: CalloutID, viewOnly: boolean) {
+	public constructor(plugin: CalloutStore, id: CalloutID, viewOnly: boolean) {
 		super();
 		this.plugin = plugin;
 		this.viewOnly = viewOnly;
 		this.title = { title: 'Callout', subtitle: id };
 
 		// Get the callout information.
-		this.callout = plugin.callouts.get(id) ?? {
+		this.callout = plugin.getCallout(id) ?? {
 			sources: [{ type: 'custom' }],
 			...plugin.calloutResolver.getCalloutProperties(IMPOSSIBLE_CALLOUT_ID),
 			id,

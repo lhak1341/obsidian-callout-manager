@@ -3,7 +3,7 @@ import { EditCalloutPane } from '.';
 import { Setting, TextComponent } from 'obsidian';
 
 import { Callout } from '&callout';
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../../callout-store';
 
 import { UIPaneNavigation } from '&ui/pane';
 
@@ -14,7 +14,7 @@ import { makeTextComponentValidateCalloutID } from '../create-callout-pane';
  * An editor UI to change a callout's misc settings.
  */
 export class MiscEditor {
-	public plugin: CalloutManagerPlugin;
+	public plugin: CalloutStore;
 
 	public nav!: UIPaneNavigation;
 	public viewOnly: boolean;
@@ -23,7 +23,7 @@ export class MiscEditor {
 
 	private renameSetting: Setting | null;
 
-	constructor(plugin: CalloutManagerPlugin, callout: Callout, containerEl: HTMLElement, viewOnly: boolean) {
+	constructor(plugin: CalloutStore, callout: Callout, containerEl: HTMLElement, viewOnly: boolean) {
 		this.plugin = plugin;
 		this.callout = callout;
 		this.containerEl = containerEl;
@@ -62,7 +62,7 @@ export class MiscEditor {
 				// Ensure the ID is not already in use.
 				const isUnusedId = validity.addSource('unused');
 				cmp.onChange((value) => {
-					const alreadyExists = plugin.callouts.has(value);
+					const alreadyExists = plugin.hasCallout(value);
 					isUnusedId(!alreadyExists);
 					cmp.inputEl.classList.toggle('invalid', alreadyExists);
 				});

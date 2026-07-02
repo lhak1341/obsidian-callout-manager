@@ -4,7 +4,7 @@ import { getCurrentColorScheme } from 'obsidian-extra';
 import { Callout } from '&callout';
 import { CalloutSettings, calloutSettingsToCSS, currentCalloutEnvironment } from '&callout-settings';
 import { getTitleFromCallout } from '&callout-util';
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../../callout-store';
 
 import { IsolatedCalloutPreviewComponent } from '&ui/component/callout-preview';
 
@@ -16,7 +16,7 @@ import { IsolatedCalloutPreviewComponent } from '&ui/component/callout-preview';
 export class EditCalloutPanePreview {
 	public readonly preview: IsolatedCalloutPreviewComponent;
 
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly plugin: CalloutStore;
 	private readonly sectionEl: HTMLElement;
 	private readonly calloutId: string;
 
@@ -25,7 +25,7 @@ export class EditCalloutPanePreview {
 
 	private calloutHasIconReady: boolean;
 
-	public constructor(plugin: CalloutManagerPlugin, callout: Callout, viewOnly: boolean) {
+	public constructor(plugin: CalloutStore, callout: Callout, viewOnly: boolean) {
 		this.calloutHasIconReady = false;
 		this.calloutId = callout.id;
 		this.plugin = plugin;

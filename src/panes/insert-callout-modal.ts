@@ -2,11 +2,11 @@ import { MarkdownView, Modal, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../callout-store';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
 
 export class InsertCalloutModal extends Modal {
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly plugin: CalloutStore;
 	private allCallouts: Callout[];
 	private filteredCallouts: Callout[];
 	private selectedCallout: Callout | null = null;
@@ -18,10 +18,10 @@ export class InsertCalloutModal extends Modal {
 	private gridEl: HTMLElement | null = null;
 	private previewContainer: HTMLElement | null = null;
 
-	public constructor(plugin: CalloutManagerPlugin) {
+	public constructor(plugin: CalloutStore) {
 		super(plugin.app);
 		this.plugin = plugin;
-		this.allCallouts = [...plugin.callouts.values()].sort((a, b) => a.id.localeCompare(b.id));
+		this.allCallouts = [...plugin.getCallouts()].sort((a, b) => a.id.localeCompare(b.id));
 		this.filteredCallouts = [...this.allCallouts];
 		if (this.allCallouts.length > 0) {
 			this.selectedCallout = this.allCallouts[0];

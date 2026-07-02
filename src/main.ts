@@ -3,7 +3,7 @@ import { CustomStyleSheet, createCustomStyleSheet } from 'obsidian-extra';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
 
-import type { CalloutID, CalloutManager } from '../api';
+import type { Callout, CalloutID, CalloutManager } from '../api';
 
 import { CalloutManagerAPIs } from './apis';
 import { CalloutCollection } from './callout-collection';
@@ -12,6 +12,7 @@ import { CalloutSettings, calloutSettingsToCSS, calloutSettingsToStyles, current
 import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import { ManagePluginPane } from './panes/manage-plugin-pane';
+import { CalloutStore } from './callout-store';
 import Settings, { defaultSettings, migrateSettings } from './settings';
 
 const DEFAULT_CALLOUT_COLORS_CSS = `
@@ -74,7 +75,7 @@ const DEFAULT_CALLOUT_COLORS_CSS = `
 .callout[data-callout='palette'] { --callout-color: var(--callout-quote) }
 `.trim();
 
-export default class CalloutManagerPlugin extends Plugin {
+export default class CalloutManagerPlugin extends Plugin implements CalloutStore {
 	public settings!: Settings;
 	public cssApplier!: CustomStyleSheet;
 
@@ -247,6 +248,32 @@ export default class CalloutManagerPlugin extends Plugin {
 		// Save settings and emit an API event.
 		this.saveSettings();
 		this.api.emitEventForCalloutChange(id);
+	}
+
+	public getCallouts(): Callout[] {
+		return this.callouts.values();
+	}
+
+	public getCallout(id: CalloutID): Callout | undefined {
+		return this.callouts.get(id);
+	}
+
+	public hasCallout(id: CalloutID): boolean {
+		return this.callouts.has(id);
+	}
+
+	public getAliasGroups(): Record<string, string[]> {
+		return { ...this.settings.aliasGroups };
+	}
+
+	public setAliasGroup(canonical: string, aliases: string[]): void {
+		if (aliases.length === 0) {
+			delete this.settings.aliasGroups[canonical];
+		} else {
+			this.settings.aliasGroups[canonical] = aliases;
+		}
+		this.saveSettings();
+		this.applyStyles();
 	}
 
 	/**

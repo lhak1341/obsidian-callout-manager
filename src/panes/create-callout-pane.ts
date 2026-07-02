@@ -1,6 +1,6 @@
 import { Setting, TextComponent } from 'obsidian';
 
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../callout-store';
 
 import { UIPane } from '&ui/pane';
 
@@ -10,14 +10,14 @@ import { EditCalloutPane } from './edit-callout-pane';
 
 export class CreateCalloutPane extends UIPane {
 	public readonly title = { title: 'Callouts', subtitle: 'New Callout' };
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly plugin: CalloutStore;
 
 	private btnCreate: HTMLButtonElement;
 	private fieldId: Setting;
 	private fieldIdComponent!: TextComponent;
 	private validity: ValiditySet;
 
-	public constructor(plugin: CalloutManagerPlugin) {
+	public constructor(plugin: CalloutStore) {
 		super();
 		this.plugin = plugin;
 		this.validity = new ValiditySet(ValiditySet.AllValid);

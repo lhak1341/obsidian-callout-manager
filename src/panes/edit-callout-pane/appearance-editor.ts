@@ -1,6 +1,6 @@
 import { Callout } from '&callout';
 import { CalloutSettings } from '&callout-settings';
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../../callout-store';
 
 import { UIPaneNavigation } from '&ui/pane';
 
@@ -10,7 +10,7 @@ import { Appearance } from './appearance-type';
  * An editor UI to change a callout's appearance settings.
  */
 export abstract class AppearanceEditor<T extends Appearance> {
-	public plugin!: CalloutManagerPlugin;
+	public plugin!: CalloutStore;
 
 	public nav!: UIPaneNavigation;
 	public callout!: Callout;

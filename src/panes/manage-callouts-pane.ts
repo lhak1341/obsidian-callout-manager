@@ -4,7 +4,7 @@ import { closeSettings } from 'obsidian-extra/unsafe';
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
 import { CalloutSettings, CalloutSettingsChanges } from '&callout-settings';
-import CalloutManagerPlugin from '&plugin';
+import { CalloutStore } from '../callout-store';
 import { UIPane } from '&ui/pane';
 
 import { determineAppearanceType } from './edit-callout-pane/appearance-type';
@@ -18,7 +18,7 @@ import { defaultColors } from '../default_colors.json';
  */
 export class ManageCalloutsPane extends UIPane {
 	public readonly title = { title: 'Callouts', subtitle: 'Manage' };
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly plugin: CalloutStore;
 
 	private searchQuery: string;
 	private allCallouts: Callout[];
@@ -26,7 +26,7 @@ export class ManageCalloutsPane extends UIPane {
 	private isCreating = false;
 	private sortMode: 'name' | 'color' | 'icon' = 'name';
 
-	public constructor(plugin: CalloutManagerPlugin) {
+	public constructor(plugin: CalloutStore) {
 		super();
 		this.plugin = plugin;
 		this.searchQuery = '';
@@ -35,14 +35,14 @@ export class ManageCalloutsPane extends UIPane {
 	}
 
 	private refresh(): void {
-		this.allCallouts = [...this.plugin.callouts.values()].sort((a, b) => a.id.localeCompare(b.id));
+		this.allCallouts = [...this.plugin.getCallouts()].sort((a, b) => a.id.localeCompare(b.id));
 		this.applyFilter();
 		this.display();
 	}
 
 	private applyFilter(): void {
 		const q = this.searchQuery.toLowerCase().trim();
-		const aliasGroups = this.plugin.settings.aliasGroups;
+		const aliasGroups = this.plugin.getAliasGroups();
 		const list = q
 			? this.allCallouts.filter(
 					(c) =>
@@ -102,7 +102,7 @@ export class ManageCalloutsPane extends UIPane {
 
 			const doCreate = () => {
 				const id = nameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
-				if (!id || !/^[a-z][a-z0-9-]*$/.test(id) || this.plugin.callouts.get(id)) {
+				if (!id || !/^[a-z][a-z0-9-]*$/.test(id) || this.plugin.hasCallout(id)) {
 					nameInput.focus();
 					return;
 				}
@@ -143,7 +143,7 @@ export class ManageCalloutsPane extends UIPane {
 
 	private renderCalloutRow(containerEl: HTMLElement, callout: Callout): void {
 		const { plugin } = this;
-		const aliasGroups = plugin.settings.aliasGroups;
+		const aliasGroups = plugin.getAliasGroups();
 
 		// Read current color + icon overrides from saved settings.
 		const savedSettings = plugin.getCalloutSettings(callout.id);
@@ -251,10 +251,7 @@ export class ManageCalloutsPane extends UIPane {
 						chip
 							.createEl('button', { cls: 'calloutmanager-alias-chip-remove', text: '×' })
 							.addEventListener('click', () => {
-								aliasGroups[callout.id] = list.filter((a) => a !== alias);
-								if (aliasGroups[callout.id].length === 0) delete aliasGroups[callout.id];
-								plugin.saveSettings();
-								plugin.applyStyles();
+								plugin.setAliasGroup(callout.id, list.filter((a) => a !== alias));
 								this.refresh();
 							});
 					}
@@ -266,9 +263,7 @@ export class ManageCalloutsPane extends UIPane {
 					const doAdd = () => {
 						const val = input.value.trim().toLowerCase();
 						if (val && !list.includes(val)) {
-							aliasGroups[callout.id] = [...list, val];
-							plugin.saveSettings();
-							plugin.applyStyles();
+							plugin.setAliasGroup(callout.id, [...list, val]);
 							this.refresh();
 						} else {
 							input.value = '';
