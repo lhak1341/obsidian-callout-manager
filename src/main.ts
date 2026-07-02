@@ -8,72 +8,14 @@ import type { Callout, CalloutID, CalloutManager } from '../api';
 import { CalloutManagerAPIs } from './apis';
 import { CalloutCollection } from './callout-collection';
 import { CalloutResolver } from './callout-resolver';
-import { CalloutSettings, calloutSettingsToCSS, calloutSettingsToStyles, currentCalloutEnvironment } from './callout-settings';
+import { CalloutSettings, currentCalloutEnvironment } from './callout-settings';
+import { assembleStylesheet } from './assemble-stylesheet';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import { ManagePluginPane } from './panes/manage-plugin-pane';
 import { CalloutStore } from './callout-store';
 import Settings, { defaultSettings, migrateSettings } from './settings';
 
-const DEFAULT_CALLOUT_COLORS_CSS = `
-.callout[data-callout='note'],
-.callout[data-callout='location'],
-.callout[data-callout='info'],
-.callout[data-callout='todo'] { --callout-color: var(--color-blue) }
-
-.callout[data-callout='abstract'],
-.callout[data-callout='summary'],
-.callout[data-callout='tldr'],
-.callout[data-callout='tip'],
-.callout[data-callout='hint'] { --callout-color: var(--color-cyan) }
-
-.callout[data-callout='pros'],
-.callout[data-callout='positive'],
-.callout[data-callout='practice'],
-.callout[data-callout='success'],
-.callout[data-callout='check'],
-.callout[data-callout='done'] { --callout-color: var(--color-green) }
-
-.callout[data-callout='recipe'],
-.callout[data-callout='cue'],
-.callout[data-callout='question'],
-.callout[data-callout='faq'],
-.callout[data-callout='help'],
-.callout[data-callout='idea'],
-.callout[data-callout='win'],
-.callout[data-callout='reward'] { --callout-color: var(--color-yellow) }
-
-.callout[data-callout='warning'],
-.callout[data-callout='caution'],
-.callout[data-callout='attention'],
-.callout[data-callout='reminder'] { --callout-color: var(--color-orange) }
-
-.callout[data-callout='favorite'],
-.callout[data-callout='bookmark'],
-.callout[data-callout='important'] { --callout-color: var(--color-pink) }
-
-.callout[data-callout='cons'],
-.callout[data-callout='negative'],
-.callout[data-callout='failure'],
-.callout[data-callout='fail'],
-.callout[data-callout='missing'],
-.callout[data-callout='danger'],
-.callout[data-callout='error'],
-.callout[data-callout='debug'],
-.callout[data-callout='bug'] { --callout-color: var(--color-red) }
-
-.callout[data-callout='event'],
-.callout[data-callout='reference'],
-.callout[data-callout='example'] { --callout-color: var(--color-purple) }
-
-.callout[data-callout='cite'],
-.callout[data-callout='file'],
-.callout[data-callout='attachment'],
-.callout[data-callout='url'],
-.callout[data-callout='link'],
-.callout[data-callout='navi'],
-.callout[data-callout='palette'] { --callout-color: var(--callout-quote) }
-`.trim();
 
 export default class CalloutManagerPlugin extends Plugin implements CalloutStore {
 	public settings!: Settings;
@@ -323,43 +265,14 @@ export default class CalloutManagerPlugin extends Plugin implements CalloutStore
 	 * resolver's custom stylesheet.
 	 */
 	public applyStyles() {
-		const env = currentCalloutEnvironment(this.app);
-
-		// Build user-override CSS for all explicitly configured callouts.
-		const userOverrideCSS = Object.entries(this.settings.callouts.settings)
-			.map(([id, settings]) => calloutSettingsToCSS(id, settings, env))
-			.filter(Boolean);
-
-		// Pass 1: seed the resolver with defaults + user overrides so that
-		// getCalloutProperties(canonical) returns fully-resolved values.
-		this.calloutResolver.customStyleEl.textContent = [DEFAULT_CALLOUT_COLORS_CSS, ...userOverrideCSS].join('\n\n');
-
-		// Pass 2: for every alias group propagate both icon AND color from the
-		// canonical to each alias.  This works even when the canonical has no
-		// explicit user override, because we read from the resolver which already
-		// has Obsidian's native CSS applied.
-		const aliasPropagationCSS: string[] = [];
-		for (const [canonical, aliases] of Object.entries(this.settings.aliasGroups)) {
-			if (!aliases?.length) continue;
-			const { color, icon } = this.calloutResolver.getCalloutProperties(canonical);
-			if (!color && !icon) continue;
-
-			const styleLines: string[] = [];
-			if (color) styleLines.push(`--callout-color: ${color}`);
-			if (icon) styleLines.push(`--callout-icon: ${icon}`);
-			const styleBlock = styleLines.join(';\n\t');
-
-			for (const alias of aliases) {
-				aliasPropagationCSS.push(`.callout[data-callout="${alias}"] {\n\t${styleBlock}\n}`);
-			}
-		}
-
-		// Final order: defaults → alias propagation → user overrides.
-		// Putting user overrides last means an alias with its own explicit setting
-		// still wins over what it inherited from the canonical.
-		const fullStylesheet = [DEFAULT_CALLOUT_COLORS_CSS, ...aliasPropagationCSS, ...userOverrideCSS].join('\n\n');
-		this.cssApplier.css = fullStylesheet;
-		this.calloutResolver.customStyleEl.textContent = fullStylesheet;
+		const css = assembleStylesheet(
+			this.settings.callouts.settings,
+			this.settings.aliasGroups,
+			currentCalloutEnvironment(this.app),
+			this.calloutResolver,
+		);
+		this.cssApplier.css = css;
+		this.calloutResolver.setCustomStyles(css);
 	}
 
 	/**

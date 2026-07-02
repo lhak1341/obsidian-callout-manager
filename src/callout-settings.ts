@@ -73,7 +73,7 @@ export function calloutSettingsToStyles(
  *
  * @returns True if the condition holds for the given environment.
  */
-function checkCondition(
+export function checkCondition(
 	condition: CalloutSettingsCondition,
 	environment: { theme: string; colorScheme: 'dark' | 'light' },
 ): boolean {
@@ -83,12 +83,12 @@ function checkCondition(
 
 	// "or" combinator.
 	if ('or' in condition && condition.or !== undefined) {
-		return condition.or.findIndex((p) => checkCondition(p, environment) === true) !== undefined;
+		return condition.or.findIndex((p) => checkCondition(p, environment) === true) !== -1;
 	}
 
 	// "and" combinator.
 	if ('and' in condition && condition.and !== undefined) {
-		return condition.and.findIndex((p) => checkCondition(p, environment) === false) === undefined;
+		return condition.and.findIndex((p) => checkCondition(p, environment) === false) === -1;
 	}
 
 	// Theme condition.

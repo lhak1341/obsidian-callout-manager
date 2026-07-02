@@ -85,8 +85,14 @@ export class CalloutResolver {
 		}));
 	}
 
-	public get customStyleEl(): HTMLStyleElement {
-		return this.calloutPreview.customStyleEl as HTMLStyleElement;
+	/**
+	 * Sets the content of the resolver's custom stylesheet.
+	 * Used to seed user overrides before resolving callout properties, and to apply the final stylesheet.
+	 *
+	 * @param css The CSS string to set.
+	 */
+	public setCustomStyles(css: string): void {
+		(this.calloutPreview.customStyleEl as HTMLStyleElement).textContent = css;
 	}
 }
 
