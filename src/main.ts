@@ -9,6 +9,7 @@ import { CalloutManagerAPIs } from './apis';
 import { CalloutCollection } from './callout-collection';
 import { CalloutResolver } from './callout-resolver';
 import { CalloutSettings, calloutSettingsToCSS, calloutSettingsToStyles, currentCalloutEnvironment } from './callout-settings';
+import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import { ManagePluginPane } from './panes/manage-plugin-pane';
 import Settings, { defaultSettings, migrateSettings } from './settings';
@@ -147,6 +148,14 @@ export default class CalloutManagerPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: 'insert-callout',
+			name: 'Insert callout',
+			editorCallback: () => {
+				new InsertCalloutModal(this).open();
+			},
+		});
+
 		// Signal to wake async functions waiting for the API to be ready.
 		this.api = new CalloutManagerAPIs(this);
 		this.apiReadySignal();
@@ -154,7 +163,7 @@ export default class CalloutManagerPlugin extends Plugin {
 		// Defer UI elements that don't need to be ready before the workspace loads.
 		this.app.workspace.onLayoutReady(() => {
 			this.addRibbonIcon('lucide-gallery-vertical', 'Insert callout', () => {
-				this.settingTab.openWithPane(new ManageCalloutsPane(this));
+				new InsertCalloutModal(this).open();
 			});
 		});
 	}
