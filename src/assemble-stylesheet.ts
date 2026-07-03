@@ -1,5 +1,5 @@
 import type { CalloutID } from '&callout';
-import { CalloutSettings, calloutSettingsToCSS, currentCalloutEnvironment } from '&callout-settings';
+import { CalloutEnvironment, CalloutSettings, calloutSettingsToCSS } from '&callout-settings';
 
 const DEFAULT_CALLOUT_COLORS_CSS = `
 .callout[data-callout='note'],
@@ -69,7 +69,7 @@ const DEFAULT_CALLOUT_COLORS_CSS = `
 export function assembleStylesheet(
 	settings: Record<CalloutID, CalloutSettings>,
 	aliasGroups: Record<string, string[]>,
-	env: ReturnType<typeof currentCalloutEnvironment>,
+	env: CalloutEnvironment,
 ): string {
 	const userOverrideCSS = Object.entries(settings)
 		.map(([id, s]) => calloutSettingsToCSS(id, s, env))

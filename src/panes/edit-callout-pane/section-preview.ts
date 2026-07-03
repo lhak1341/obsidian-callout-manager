@@ -1,7 +1,7 @@
 import { Component, MarkdownRenderer, TextAreaComponent, getIcon } from 'obsidian';
 import { getCurrentColorScheme } from 'obsidian-extra';
 
-import { Callout } from '&callout';
+import { Callout, CalloutID } from '&callout';
 import { CalloutSettings, calloutSettingsToCSS, currentCalloutEnvironment } from '&callout-settings';
 import { getTitleFromCallout } from '&callout-util';
 import { CalloutReader } from '../../callout-store';
@@ -18,7 +18,7 @@ export class EditCalloutPanePreview {
 
 	private readonly plugin: CalloutReader;
 	private readonly sectionEl: HTMLElement;
-	private readonly calloutId: string;
+	private readonly calloutId: CalloutID;
 
 	private previewMarkdown = 'Lorem ipsum dolor sit amet.';
 	private previewEditorEl: HTMLTextAreaElement | null = null;

@@ -11,7 +11,7 @@ import { CalloutID } from '&callout';
  * @param app The app instance.
  * @returns The callout environment.
  */
-export function currentCalloutEnvironment(app: App): Parameters<typeof checkCondition>[1] {
+export function currentCalloutEnvironment(app: App): CalloutEnvironment {
 	const theme = getCurrentThemeID(app) ?? '<default>';
 	return {
 		theme,
@@ -29,7 +29,7 @@ export function currentCalloutEnvironment(app: App): Parameters<typeof checkCond
 export function calloutSettingsToCSS(
 	id: CalloutID,
 	settings: CalloutSettings,
-	environment: Parameters<typeof checkCondition>[1],
+	environment: CalloutEnvironment,
 ): string {
 	const styles = calloutSettingsToStyles(settings, environment).join(';\n\t');
 	if (styles.length === 0) {
@@ -46,7 +46,7 @@ export function calloutSettingsToCSS(
  */
 export function calloutSettingsToStyles(
 	settings: CalloutSettings,
-	environment: Parameters<typeof checkCondition>[1],
+	environment: CalloutEnvironment,
 ): string[] {
 	const styles: string[] = [];
 
@@ -75,7 +75,7 @@ export function calloutSettingsToStyles(
  */
 export function checkCondition(
 	condition: CalloutSettingsCondition,
-	environment: { theme: string; colorScheme: 'dark' | 'light' },
+	environment: CalloutEnvironment,
 ): boolean {
 	if (condition == null) {
 		return true;
@@ -138,6 +138,11 @@ export function typeofCondition(condition: CalloutSettingsCondition): CalloutSet
 // ---------------------------------------------------------------------------------------------------------------------
 // DSL:
 // ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * The theme/color-scheme context passed to condition checks.
+ */
+export type CalloutEnvironment = { theme: string; colorScheme: 'dark' | 'light' };
 
 /**
  * A type of {@link CalloutSettingsCondition callout setting condition}.

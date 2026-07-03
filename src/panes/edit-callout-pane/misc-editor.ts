@@ -14,12 +14,12 @@ import { makeTextComponentValidateCalloutID } from '../../util/callout-id';
  * An editor UI to change a callout's misc settings.
  */
 export class MiscEditor {
-	public plugin: CalloutStore;
+	private readonly plugin: CalloutStore;
 
-	public nav!: UIPaneNavigation;
-	public viewOnly: boolean;
-	public callout: Callout;
-	public containerEl: HTMLElement;
+	private nav!: UIPaneNavigation;
+	private readonly viewOnly: boolean;
+	private readonly callout: Callout;
+	private readonly containerEl: HTMLElement;
 
 	private renameSetting: Setting | null;
 
