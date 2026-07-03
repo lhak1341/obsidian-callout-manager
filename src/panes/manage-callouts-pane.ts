@@ -1,5 +1,4 @@
-import { ButtonComponent, DropdownComponent, MarkdownView, Setting, TextComponent, setIcon } from 'obsidian';
-import { closeSettings } from 'obsidian-extra/unsafe';
+import { ButtonComponent, DropdownComponent, Setting, TextComponent, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
@@ -242,7 +241,7 @@ export class ManageCalloutsPane extends UIPane {
 			// === Alias chips (all callouts) ===
 			{
 				const currentAliases = aliasGroups[callout.id] ?? [];
-				const aliasRow = setting.infoEl.createDiv({ cls: 'calloutmanager-row-aliases' });
+				const aliasRow = setting.nameEl.createDiv({ cls: 'calloutmanager-row-aliases' });
 
 				const renderChips = (list: string[]) => {
 					aliasRow.empty();
@@ -312,22 +311,6 @@ export class ManageCalloutsPane extends UIPane {
 				save();
 				refreshIconEl(currentIcon);
 			});
-
-			// === Insert callout into editor ===
-			setting.addExtraButton((btn) =>
-				btn
-					.setIcon('lucide-forward')
-					.setTooltip('Insert callout')
-					.onClick(() => {
-						const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-						if (view) {
-							const cursor = view.editor.getCursor();
-							view.editor.replaceRange(`> [!${callout.id}]\n> Contents`, cursor);
-							view.editor.setCursor(cursor.line + 1, 10);
-							closeSettings(plugin.app);
-						}
-					}),
-			);
 
 			// === Delete (custom-only callouts) ===
 			if (isCustomOnly) {
@@ -430,13 +413,13 @@ declare const STYLES: `
 		}
 	}
 
-	/* Alias chips row below the callout name */
+	/* Alias chips inline with the callout name */
 	.calloutmanager-row-aliases {
-		display: flex;
+		display: inline-flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 4px;
-		padding-top: 4px;
+		margin-left: 6px;
 	}
 
 	.calloutmanager-alias-chip {

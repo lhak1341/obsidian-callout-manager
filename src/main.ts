@@ -12,7 +12,6 @@ import { CalloutSettings, currentCalloutEnvironment } from './callout-settings';
 import { assembleStylesheet } from './assemble-stylesheet';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
-import { ManagePluginPane } from './panes/manage-plugin-pane';
 import { CalloutStore } from './callout-store';
 import Settings, { defaultSettings, migrateSettings } from './settings';
 
@@ -81,7 +80,7 @@ export default class CalloutManagerPlugin extends Plugin implements CalloutStore
 		this.registerEvent(this.app.workspace.on('layout-change', reapplyDebounced));
 
 		// Register setting tab.
-		this.settingTab = new UISettingTab(this, () => new ManagePluginPane(this));
+		this.settingTab = new UISettingTab(this, () => new ManageCalloutsPane(this));
 		this.addSettingTab(this.settingTab);
 
 		// Register modal commands.

@@ -153,10 +153,7 @@ export class UIPaneLayers {
 			return;
 		}
 
-		// Show the header bar only when navigated into a sub-pane; at root it
-		// has no back button and no useful content so it is hidden via CSS.
 		const isSubPane = this.layers.length > 0;
-		navEl.parentElement?.classList.toggle('calloutmanager-setting-tab-header--active', isSubPane);
 
 		// Display the nav.
 		navEl.empty();
@@ -176,6 +173,11 @@ export class UIPaneLayers {
 			this.controlsEl.empty();
 			activePane.displayControls();
 		}
+
+		// Show the header when there's a back button (sub-pane) or when the pane
+		// rendered controls (e.g. search/sort bar on the root pane).
+		const hasControls = this.controlsEl.childElementCount > 0;
+		navEl.parentElement?.classList.toggle('calloutmanager-setting-tab-header--active', isSubPane || hasControls);
 
 		// Display the contents.
 		containerEl.empty();
