@@ -17,6 +17,8 @@ import { CalloutStore } from './callout-store';
 import Settings, { defaultSettings, migrateSettings } from './settings';
 
 
+const IMPOSSIBLE_CALLOUT_ID = '[not a real callout]';
+
 export default class CalloutManagerPlugin extends Plugin implements CalloutStore {
 	public settings!: Settings;
 	public cssApplier!: CustomStyleSheet;
@@ -190,6 +192,10 @@ export default class CalloutManagerPlugin extends Plugin implements CalloutStore
 		// Save settings and emit an API event.
 		this.saveSettings();
 		this.api.emitEventForCalloutChange(id);
+	}
+
+	public getDefaultCalloutProperties(): { color: string; icon: string } {
+		return this.calloutResolver.getCalloutProperties(IMPOSSIBLE_CALLOUT_ID);
 	}
 
 	public getCallouts(): Callout[] {

@@ -1,7 +1,6 @@
 import { App } from 'obsidian';
 
 import { Callout, CalloutID } from '&callout';
-import { CalloutResolver } from './callout-resolver';
 import { CalloutSettings } from './callout-settings';
 import { CalloutStore } from './callout-store';
 
@@ -11,7 +10,6 @@ import { CalloutStore } from './callout-store';
  */
 export class InMemoryCalloutStore implements CalloutStore {
 	public readonly app: App;
-	public readonly calloutResolver: CalloutResolver;
 
 	private readonly calloutMap: Map<CalloutID, Callout>;
 	private readonly settingsMap: Map<CalloutID, CalloutSettings>;
@@ -19,22 +17,23 @@ export class InMemoryCalloutStore implements CalloutStore {
 
 	public constructor({
 		app,
-		calloutResolver,
 		callouts = [],
 		settings = {},
 		aliasGroups = {},
 	}: {
 		app: App;
-		calloutResolver: CalloutResolver;
 		callouts?: Callout[];
 		settings?: Record<CalloutID, CalloutSettings>;
 		aliasGroups?: Record<string, string[]>;
 	}) {
 		this.app = app;
-		this.calloutResolver = calloutResolver;
 		this.calloutMap = new Map(callouts.map((c) => [c.id, { ...c }]));
 		this.settingsMap = new Map(Object.entries(settings) as [CalloutID, CalloutSettings][]);
 		this.aliasGroupsData = { ...aliasGroups };
+	}
+
+	public getDefaultCalloutProperties(): { color: string; icon: string } {
+		return { color: '', icon: '' };
 	}
 
 	public getCallouts(): Callout[] {

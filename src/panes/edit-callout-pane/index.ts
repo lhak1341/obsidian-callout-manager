@@ -14,8 +14,6 @@ import { MiscEditor } from './misc-editor';
 import { renderInfo } from './section-info';
 import { EditCalloutPanePreview } from './section-preview';
 
-const IMPOSSIBLE_CALLOUT_ID = '[not a real callout]';
-
 export class EditCalloutPane extends UIPane {
 	public readonly title;
 	private readonly viewOnly: boolean;
@@ -40,7 +38,7 @@ export class EditCalloutPane extends UIPane {
 		// Get the callout information.
 		this.callout = plugin.getCallout(id) ?? {
 			sources: [{ type: 'custom' }],
-			...plugin.calloutResolver.getCalloutProperties(IMPOSSIBLE_CALLOUT_ID),
+			...plugin.getDefaultCalloutProperties(),
 			id,
 		};
 
@@ -97,15 +95,16 @@ export class EditCalloutPane extends UIPane {
 		this.changeAppearanceEditor(appearance);
 		const newSettings = this.appearanceEditor.toSettings();
 		const { callout } = this;
-		const { calloutResolver } = this.plugin;
 
 		// Update the plugin settings.
 		this.plugin.setCalloutSettings(callout.id, newSettings);
 
-		// Update the callout properties.
-		const { color, icon } = calloutResolver.getCalloutProperties(callout.id);
-		callout.color = color;
-		callout.icon = icon;
+		// Update the callout properties from the freshly-resolved collection.
+		const fresh = this.plugin.getCallout(callout.id);
+		if (fresh) {
+			callout.color = fresh.color;
+			callout.icon = fresh.icon;
+		}
 
 		// Rerender to show what changed.
 		this.previewSection.changeSettings(newSettings);

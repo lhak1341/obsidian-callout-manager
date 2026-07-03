@@ -1,12 +1,12 @@
 import { App } from 'obsidian';
 
 import { Callout, CalloutID } from '&callout';
-import { CalloutResolver } from './callout-resolver';
 import { CalloutSettings } from './callout-settings';
 
 export interface CalloutStore {
 	readonly app: App;
-	readonly calloutResolver: CalloutResolver;
+
+	getDefaultCalloutProperties(): { color: string; icon: string };
 
 	getCallouts(): Callout[];
 	getCallout(id: CalloutID): Callout | undefined;

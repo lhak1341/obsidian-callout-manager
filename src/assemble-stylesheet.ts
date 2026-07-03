@@ -83,20 +83,18 @@ export function assembleStylesheet(
 	// Pass 1: seed the resolver so getCalloutProperties returns fully-resolved values.
 	resolver.setCustomStyles([DEFAULT_CALLOUT_COLORS_CSS, ...userOverrideCSS].join('\n\n'));
 
-	// Pass 2: propagate icon and color from each canonical to its aliases.
+	// Pass 2: propagate the canonical's user settings to each alias.
+	// We copy the settings directly (preserving var() references) rather than reading
+	// resolved values from the shadow-DOM probe, which can produce a slightly different
+	// concrete value than the live document resolves at render time.
+	// If the canonical has no active user settings, aliases inherit the correct defaults
+	// from DEFAULT_CALLOUT_COLORS_CSS and Obsidian's own CSS — no propagation needed.
 	const aliasPropagationCSS: string[] = [];
 	for (const [canonical, aliases] of Object.entries(aliasGroups)) {
-		if (!aliases?.length) continue;
-		const { color, icon } = resolver.getCalloutProperties(canonical);
-		if (!color && !icon) continue;
-
-		const styleLines: string[] = [];
-		if (color) styleLines.push(`--callout-color: ${color}`);
-		if (icon) styleLines.push(`--callout-icon: ${icon}`);
-		const styleBlock = styleLines.join(';\n\t');
-
+		if (!aliases?.length || !settings[canonical]) continue;
 		for (const alias of aliases) {
-			aliasPropagationCSS.push(`.callout[data-callout="${alias}"] {\n\t${styleBlock}\n}`);
+			const css = calloutSettingsToCSS(alias, settings[canonical], env);
+			if (css) aliasPropagationCSS.push(css);
 		}
 	}
 
