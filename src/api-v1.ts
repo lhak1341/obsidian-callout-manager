@@ -1,20 +1,20 @@
 import { Events, Plugin, RGB } from 'obsidian';
 
 import { getColorFromCallout, getTitleFromCallout } from '&callout-util';
-import CalloutManagerPlugin from '&plugin';
 
 import { Callout, CalloutManager } from '../api';
 import { CalloutManagerEvent, CalloutManagerEventListener } from '../api/events';
+import { CalloutStore } from './callout-store';
 import { destroy, emitter } from './api-common';
 
 export class CalloutManagerAPI_V1 implements CalloutManager<true> {
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly store: CalloutStore;
 	private readonly consumer: Plugin | undefined;
 
 	public readonly [emitter]: Events;
 
-	public constructor(plugin: CalloutManagerPlugin, consumer: Plugin | undefined) {
-		this.plugin = plugin;
+	public constructor(store: CalloutStore, consumer: Plugin | undefined) {
+		this.store = store;
 		this.consumer = consumer;
 		this[emitter] = new Events();
 
@@ -27,7 +27,7 @@ export class CalloutManagerAPI_V1 implements CalloutManager<true> {
 
 	/** @override */
 	public getCallouts(): Readonly<Callout>[] {
-		return this.plugin.callouts.values().map((callout) => Object.freeze({ ...callout }));
+		return this.store.getCallouts().map((callout) => Object.freeze({ ...callout }));
 	}
 
 	/** @override */

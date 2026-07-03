@@ -7,7 +7,7 @@ import { CalloutStore } from '../../callout-store';
 import { UIPane } from '&ui/pane';
 
 import { AppearanceEditor } from './appearance-editor';
-import { Appearance, determineAppearanceType } from './appearance-type';
+import { Appearance, determineAppearanceType } from '../../callout-appearance';
 import ComplexAppearanceEditor from './editor-complex';
 import UnifiedAppearanceEditor from './editor-unified';
 import { MiscEditor } from './misc-editor';

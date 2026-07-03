@@ -4,7 +4,7 @@ import { CalloutColorSetting } from '&ui/setting/callout-color';
 import { CalloutIconSetting } from '&ui/setting/callout-icon';
 
 import { AppearanceEditor } from './appearance-editor';
-import { UnifiedAppearance } from './appearance-type';
+import { UnifiedAppearance } from '../../callout-appearance';
 
 export default class UnifiedAppearanceEditor extends AppearanceEditor<UnifiedAppearance> {
 	/** @override */

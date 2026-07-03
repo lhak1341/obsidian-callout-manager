@@ -7,3 +7,5 @@
 
 ## Architecture
 - Panes take `CalloutStore` (`src/callout-store.ts`), not `CalloutManagerPlugin` — the interface is the seam.
+- `CalloutRepository` (`src/callout-repository.ts`) is the concrete `CalloutStore`; `main.ts` holds it as `this.repository` and hands it to panes, commands, and the API layer.
+- `applyStyles` is a closure inside `onload`, not a class method — it closes over the live `settings` object so the `onSave` mutation callback and the `css-change` reapply handler share the same function. Do not extract it to a method.

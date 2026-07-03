@@ -247,6 +247,39 @@ export function parseColorHex(hex: string): RGB | RGBA | null {
 	return hexRGB;
 }
 
+/**
+ * Resolves a raw callout color string to an `rgb(r, g, b)` string for inline styling.
+ *
+ * Handles three input formats:
+ * - CSS var references: `var(--color-blue)` — probed via a temporary element on `doc.body`
+ * - RGB triplets: `"82, 139, 212"` — wrapped into `rgb(…)`
+ * - Hex: `#086ddd` or `#0cf` — converted to `rgb(r, g, b)`
+ *
+ * Returns `''` if the value cannot be resolved.
+ */
+export function resolveColorToRgb(raw: string, doc: Document): string {
+	if (!raw) return '';
+
+	let value = raw;
+	if (raw.startsWith('var(')) {
+		const varName = raw.match(/var\((--[^)]+)\)/)?.[1] ?? '';
+		if (!varName) return '';
+		const probe = doc.body.createDiv();
+		value = (doc.defaultView ?? window).getComputedStyle(probe).getPropertyValue(varName).trim();
+		probe.remove();
+		if (!value) return '';
+	}
+
+	// Triplet: "82, 139, 212"
+	if (/^\d/.test(value)) return `rgb(${value})`;
+
+	// Hex: "#086ddd" or "#0cf"
+	const parsed = parseColorHex(value);
+	if (parsed) return `rgb(${parsed.r}, ${parsed.g}, ${parsed.b})`;
+
+	return '';
+}
+
 function rgbComponentStringsToNumber(components: [string, string, string]): [number, number, number] | null {
 	// Percentage.
 	if (components[0].endsWith('%')) {

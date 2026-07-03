@@ -4,7 +4,7 @@ import { CalloutStore } from '../../callout-store';
 
 import { UIPaneNavigation } from '&ui/pane';
 
-import { Appearance } from './appearance-type';
+import { Appearance } from '../../callout-appearance';
 
 /**
  * An editor UI to change a callout's appearance settings.

@@ -3,7 +3,7 @@ import { ButtonComponent } from 'obsidian';
 import { CalloutSettings } from '&callout-settings';
 
 import { AppearanceEditor } from './appearance-editor';
-import { ComplexAppearance } from './appearance-type';
+import { ComplexAppearance } from '../../callout-appearance';
 
 export default class ComplexAppearanceEditor extends AppearanceEditor<ComplexAppearance> {
 	/** @override */

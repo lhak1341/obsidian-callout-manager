@@ -1,18 +1,17 @@
 import { Plugin } from 'obsidian';
 
-import CalloutManagerPlugin from '&plugin';
-
 import { CalloutID, CalloutManager } from '../api';
 
 import { destroy, emitter } from './api-common';
 import { CalloutManagerAPI_V1 } from './api-v1';
+import { CalloutStore } from './callout-store';
 
 export class CalloutManagerAPIs {
 	private readonly handles: Map<Plugin, CalloutManagerAPI_V1>;
-	private readonly plugin: CalloutManagerPlugin;
+	private readonly store: CalloutStore;
 
-	public constructor(plugin: CalloutManagerPlugin) {
-		this.plugin = plugin;
+	public constructor(store: CalloutStore) {
+		this.store = store;
 		this.handles = new Map();
 	}
 
@@ -34,7 +33,7 @@ export class CalloutManagerAPIs {
 
 		// If we aren't trying to create an owned handle, create and return an unowned one.
 		if (consumerPlugin == null) {
-			return new CalloutManagerAPI_V1(this.plugin, undefined);
+			return new CalloutManagerAPI_V1(this.store, undefined);
 		}
 
 		// Otherwise, give back the owned handle for the plugin if we already have one.
@@ -48,7 +47,7 @@ export class CalloutManagerAPIs {
 		consumerPlugin.register(cleanupFunc);
 
 		// Create a new handle.
-		const handle = new CalloutManagerAPI_V1(this.plugin, consumerPlugin);
+		const handle = new CalloutManagerAPI_V1(this.store, consumerPlugin);
 		this.handles.set(consumerPlugin, handle);
 		return handle;
 	}

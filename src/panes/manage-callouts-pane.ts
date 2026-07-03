@@ -5,8 +5,10 @@ import { getTitleFromCallout } from '&callout-util';
 import { CalloutSettings, CalloutSettingsChanges } from '&callout-settings';
 import { CalloutStore } from '../callout-store';
 import { UIPane } from '&ui/pane';
+import { resolveColorToRgb } from '&color';
 
-import { determineAppearanceType } from './edit-callout-pane/appearance-type';
+import { determineAppearanceType } from '../callout-appearance';
+import { isValidCalloutId } from '../util/callout-id';
 
 import { defaultColors } from '../default_colors.json';
 
@@ -101,7 +103,7 @@ export class ManageCalloutsPane extends UIPane {
 
 			const doCreate = () => {
 				const id = nameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
-				if (!id || !/^[a-z][a-z0-9-]*$/.test(id) || this.plugin.hasCallout(id)) {
+				if (!id || !isValidCalloutId(id) || this.plugin.hasCallout(id)) {
 					nameInput.focus();
 					return;
 				}
@@ -166,41 +168,9 @@ export class ManageCalloutsPane extends UIPane {
 			const iconEl = setting.nameEl.createSpan({ cls: 'calloutmanager-row-icon' });
 			setIcon(iconEl, callout.icon || 'lucide-pencil');
 
-			// Resolve a raw color value (CSS var reference like "var(--color-blue)" OR
-			// an RGB triplet like "82, 139, 212") to an actual "rgb(...)" string so it
-			// can be set as an inline style on the SVG — bypassing any Obsidian class
-			// rules that block color inheritance into .svg-icon elements.
-			const resolveToRgb = (raw: string): string => {
-				if (!raw) return '';
-				let value = raw;
-				if (raw.startsWith('var(')) {
-					const varName = raw.match(/var\((--[^)]+)\)/)?.[1] ?? '';
-					if (!varName) return '';
-					const probe = activeDocument.body.createDiv();
-					value = (activeDocument.defaultView ?? window)
-						.getComputedStyle(probe)
-						.getPropertyValue(varName)
-						.trim();
-					probe.remove();
-					if (!value) return '';
-				}
-				// Triplet: "82, 139, 212"
-				if (/^\d/.test(value)) return `rgb(${value})`;
-				// Hex: "#086ddd" or "#0cf"
-				if (value.startsWith('#')) {
-					const h = value.slice(1);
-					const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-					const r = parseInt(full.slice(0, 2), 16);
-					const g = parseInt(full.slice(2, 4), 16);
-					const b = parseInt(full.slice(4, 6), 16);
-					return isNaN(r) ? '' : `rgb(${r}, ${g}, ${b})`;
-				}
-				return '';
-			};
-
 			const setIconColor = (colorValue: string) => {
 				const raw = colorValue || callout.color;
-				const rgbColor = resolveToRgb(raw);
+				const rgbColor = resolveColorToRgb(raw, activeDocument);
 				if (rgbColor) {
 					iconEl.style.setProperty('--calloutmanager-row-icon-color', rgbColor);
 				} else {
