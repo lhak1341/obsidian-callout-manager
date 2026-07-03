@@ -1,5 +1,4 @@
 import type { CalloutID } from '&callout';
-import { CalloutResolver } from '&callout-resolver';
 import { CalloutSettings, calloutSettingsToCSS, currentCalloutEnvironment } from '&callout-settings';
 
 const DEFAULT_CALLOUT_COLORS_CSS = `
@@ -64,9 +63,6 @@ const DEFAULT_CALLOUT_COLORS_CSS = `
 
 /**
  * Assembles the full stylesheet for user-configured callout overrides and alias propagation.
- *
- * Pass 1 seeds the resolver so getCalloutProperties returns values that include user overrides.
- * Pass 2 propagates icon/color from each canonical callout to its aliases.
  * Final order: defaults → alias propagation → user overrides, so an alias with its own
  * explicit setting wins over what it inherited from the canonical.
  */
@@ -74,21 +70,16 @@ export function assembleStylesheet(
 	settings: Record<CalloutID, CalloutSettings>,
 	aliasGroups: Record<string, string[]>,
 	env: ReturnType<typeof currentCalloutEnvironment>,
-	resolver: CalloutResolver,
 ): string {
 	const userOverrideCSS = Object.entries(settings)
 		.map(([id, s]) => calloutSettingsToCSS(id, s, env))
 		.filter(Boolean);
 
-	// Pass 1: seed the resolver so getCalloutProperties returns fully-resolved values.
-	resolver.setCustomStyles([DEFAULT_CALLOUT_COLORS_CSS, ...userOverrideCSS].join('\n\n'));
-
-	// Pass 2: propagate the canonical's user settings to each alias.
-	// We copy the settings directly (preserving var() references) rather than reading
-	// resolved values from the shadow-DOM probe, which can produce a slightly different
-	// concrete value than the live document resolves at render time.
-	// If the canonical has no active user settings, aliases inherit the correct defaults
-	// from DEFAULT_CALLOUT_COLORS_CSS and Obsidian's own CSS — no propagation needed.
+	// Propagate the canonical's user settings to each alias by copying settings directly
+	// (preserving var() references). Reading resolved values from the shadow-DOM probe
+	// can produce slightly different concrete values than the live document resolves at
+	// render time. If the canonical has no active user settings, aliases inherit from
+	// DEFAULT_CALLOUT_COLORS_CSS and Obsidian's own CSS — no propagation needed.
 	const aliasPropagationCSS: string[] = [];
 	for (const [canonical, aliases] of Object.entries(aliasGroups)) {
 		if (!aliases?.length || !settings[canonical]) continue;

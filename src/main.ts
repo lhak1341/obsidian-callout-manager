@@ -275,7 +275,6 @@ export default class CalloutManagerPlugin extends Plugin implements CalloutStore
 			this.settings.callouts.settings,
 			this.settings.aliasGroups,
 			currentCalloutEnvironment(this.app),
-			this.calloutResolver,
 		);
 		this.cssApplier.css = css;
 		this.calloutResolver.setCustomStyles(css);

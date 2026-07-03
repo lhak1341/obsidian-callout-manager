@@ -8,7 +8,7 @@ import { CalloutStore } from '../../callout-store';
 import { UIPaneNavigation } from '&ui/pane';
 
 import { ValiditySet } from '../../util/validity-set';
-import { makeTextComponentValidateCalloutID } from '../create-callout-pane';
+import { makeTextComponentValidateCalloutID } from '../../util/callout-id';
 
 /**
  * An editor UI to change a callout's misc settings.
