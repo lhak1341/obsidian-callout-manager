@@ -1,55 +1,65 @@
-# ADR-0001: AppearanceEditor uses late-bound field injection, not constructor injection
+# ADR-0001: AppearanceEditor nav is late-bound; render() receives it as a thunk
 
 **Status**: Accepted  
-**Date**: 2026-07-03
+**Date**: 2026-07-03  
+**Updated**: 2026-07-03 — replaced injection protocol with factory + thunk; core constraint unchanged
 
 ## Context
 
-`AppearanceEditor<T>` is an abstract base class for callout appearance editors
-(`UnifiedAppearanceEditor`, `ComplexAppearanceEditor`). Its fields — `plugin`,
-`nav`, `callout`, `appearance`, `containerEl`, `setAppearance` — are declared
-with TypeScript's definite-assignment assertion (`!`) and injected by
-`EditCalloutPane` after instantiation via `Object.defineProperties`.
+`EditCalloutPane` calls `render()` on an appearance editor from its own
+constructor (via `changeSettings`). The pane extends `UIPane`, whose `nav`
+field is set by the pane framework **after** the constructor runs. `nav` is
+therefore `undefined` at the point `render()` is first called.
 
-This looks like a candidate for constructor injection: pass an
-`AppearanceEditorContext` to the constructor so TypeScript enforces completeness
-at the call site and editors become independently constructable.
+Appearance editors need `nav` to push navigation actions (e.g. the icon
+picker), but only lazily — at user-interaction time, not at render time.
+
+An earlier design used `Object.defineProperties` to inject `nav` as a live
+getter onto each editor instance after construction. That injection protocol was
+considered for replacement with constructor injection, but rejected: `nav` is
+`undefined` at construction time so it cannot be a constructor argument, and a
+partial migration (injecting only the non-nav fields via constructor) reduced
+the `!`-assertion surface only marginally while adding constructor signatures to
+every concrete subclass.
 
 ## Decision
 
-Do not replace the injection protocol with constructor injection.
+Replace the abstract-class injection protocol with a factory function.
+`AppearanceEditor` is no longer an abstract class. `makeAppearanceEditor(appearance)`
+returns a plain `AppearanceEditorImpl` object. `render()` receives `nav` as a
+thunk — `getNav: () => UIPaneNavigation` — so it resolves lazily at
+interaction time rather than at render time.
 
 ## Reasoning
 
-`nav` is the load-bearing constraint. `EditCalloutPane` extends `UIPane`, whose
-`nav` field is set by the pane framework **after** the pane's constructor runs —
-the same late-binding pattern `UIPane` uses for its own `nav`, `containerEl`,
-`controlsEl`, and `root` fields. `AppearanceEditor` inherits this timing
-constraint because `render()` is called from the `EditCalloutPane` constructor
-(via `changeSettings`), and anything that needs `nav` for navigation must
-resolve it lazily.
+A thunk satisfies the same timing constraint as the getter without requiring
+post-construction injection. The call site is explicit about the late-binding:
 
-For this reason `nav` is wired as a live getter — `{ get: () => this.nav }` —
-not a value. It cannot be a constructor argument because it is `undefined` at
-construction time.
+```typescript
+editor.render(container, callout, () => this.nav, store, onSet);
+```
 
-Once `nav` must stay as a late-bound getter, a move to constructor injection
-would be partial: `plugin`, `containerEl`, and `setAppearance` could move to
-the constructor, but `nav`, `callout`, and `appearance` (the last two are
-legitimately mutable across `changeAppearanceEditor` calls) would remain
-injected. The partial improvement requires changing the `APPEARANCE_EDITORS`
-registry type and adding constructor signatures to all concrete subclasses for
-limited reduction in the `!` surface.
+`() => this.nav` closes over the pane's live `nav` field. By the time the user
+triggers a navigation action, the framework has set `this.nav` and the thunk
+resolves correctly. At render time (when `this.nav` is still `undefined`) the
+thunk is passed but never invoked.
 
-The `!` pattern is intentional and consistent with the framework: `UIPane`
-itself declares `nav`, `containerEl`, `controlsEl`, and `root` as
-`protected readonly field!: Type`. `AppearanceEditor` mirrors this by design.
+This eliminates the `!`-asserted fields on both the editor instances and
+`EditCalloutPane` itself (`appearanceEditor!`, `appearance!`), makes every
+editor independently constructable without a pane framework, and keeps
+the factory as the single seam: one export (`makeAppearanceEditor`), no
+registry, no abstract class.
 
 ## Consequences
 
-- The `Object.defineProperties` injection protocol in `changeAppearanceEditor`
-  stays as the authoritative initialisation path.
-- Any new `AppearanceEditor` subclass must be registered in `APPEARANCE_EDITORS`
-  with a zero-argument constructor.
-- `nav` must always be wired as a getter (not a value) so it resolves against
-  the live `EditCalloutPane.nav` after the framework sets it.
+- `makeAppearanceEditor(appearance)` is the authoritative entry point for
+  creating an editor. To add a new appearance type, add a branch to the factory
+  function (exhaustiveness-checked by TypeScript's switch).
+- `render()` always receives `getNav: () => UIPaneNavigation`. Never pass the
+  nav value directly — it may be `undefined` when `render()` is first called
+  from the pane constructor.
+- Editors are independently constructable and testable without a pane framework:
+  call the factory, then call `render()` with a stub container and a thunk that
+  returns a mock nav.
+- `EditCalloutPane` no longer holds `appearanceEditor` or `appearance` as
+  fields; the editor object is local to each call site.

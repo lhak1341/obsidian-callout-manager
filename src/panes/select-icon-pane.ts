@@ -1,6 +1,6 @@
 import { SearchResult, TextComponent, getIconIds, prepareFuzzySearch } from 'obsidian';
 
-import { CalloutStore } from '../callout-store';
+import { CalloutReader } from '../callout-store';
 
 import { IconPreviewComponent } from '&ui/component/icon-preview';
 import { UIPane, UIPaneTitle } from '&ui/pane';
@@ -14,7 +14,7 @@ const recentIcons: Set<string> = new Set();
  */
 export class SelectIconPane extends UIPane<void> {
 	public readonly title: UIPaneTitle;
-	private plugin: CalloutStore;
+	private plugin: CalloutReader;
 
 	private searchQuery: string;
 	private searchResults: IconForSearch[];
@@ -28,7 +28,7 @@ export class SelectIconPane extends UIPane<void> {
 	private compareIcons: (a: IconForSearch, b: IconForSearch) => number;
 
 	public constructor(
-		plugin: CalloutStore,
+		plugin: CalloutReader,
 		title: UIPaneTitle,
 		options: { limit?: number; onChoose: (icon: string) => void },
 	) {

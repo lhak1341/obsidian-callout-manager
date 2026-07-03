@@ -3,7 +3,7 @@ import { App } from 'obsidian';
 import { Callout, CalloutID } from '&callout';
 import { CalloutSettings } from './callout-settings';
 
-export interface CalloutStore {
+export interface CalloutReader {
 	readonly app: App;
 
 	getDefaultCalloutProperties(): { color: string; icon: string };
@@ -13,6 +13,9 @@ export interface CalloutStore {
 	hasCallout(id: CalloutID): boolean;
 
 	getCalloutSettings(id: CalloutID): CalloutSettings | undefined;
+}
+
+export interface CalloutStore extends CalloutReader {
 	setCalloutSettings(id: CalloutID, settings: CalloutSettings | undefined): void;
 
 	createCustomCallout(id: CalloutID): void;

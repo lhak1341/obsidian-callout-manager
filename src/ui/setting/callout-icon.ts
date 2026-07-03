@@ -1,7 +1,7 @@
 import { ButtonComponent, ExtraButtonComponent, Setting, getIcon } from 'obsidian';
 
 import { Callout } from '../../../api';
-import { CalloutStore } from '../../callout-store';
+import { CalloutReader } from '../../callout-store';
 import { ResetButtonComponent } from '../component/reset-button';
 import { SelectIconPane } from '../../panes/select-icon-pane';
 import { UIPaneNavigation } from '&ui/pane';
@@ -21,7 +21,7 @@ export class CalloutIconSetting extends Setting {
 	public constructor(
 		containerEl: HTMLElement,
 		callout: Callout,
-		plugin: CalloutStore,
+		plugin: CalloutReader,
 		getNav: () => UIPaneNavigation,
 	) {
 		super(containerEl);

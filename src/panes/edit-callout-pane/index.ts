@@ -6,10 +6,8 @@ import { CalloutStore } from '../../callout-store';
 
 import { UIPane } from '&ui/pane';
 
-import { AppearanceEditor } from './appearance-editor';
+import { makeAppearanceEditor } from './appearance-editor';
 import { Appearance, determineAppearanceType } from '../../callout-appearance';
-import ComplexAppearanceEditor from './editor-complex';
-import UnifiedAppearanceEditor from './editor-unified';
 import { MiscEditor } from './misc-editor';
 import { renderInfo } from './section-info';
 import { EditCalloutPanePreview } from './section-preview';
@@ -24,10 +22,8 @@ export class EditCalloutPane extends UIPane {
 	private previewSection: EditCalloutPanePreview;
 	private appearanceEditorContainerEl: HTMLElement;
 	private appearanceEditorEl: HTMLElement;
-	private appearanceEditor!: AppearanceEditor<Appearance>;
 	private miscEditor: MiscEditor;
 	private miscEditorContainerEl: HTMLElement;
-	private appearance!: Appearance;
 
 	public constructor(plugin: CalloutStore, id: CalloutID, viewOnly: boolean) {
 		super();
@@ -71,29 +67,9 @@ export class EditCalloutPane extends UIPane {
 		this.changeSettings(plugin.getCalloutSettings(id) ?? []);
 	}
 
-	protected changeAppearanceEditor(newAppearance: Appearance) {
-		const oldAppearance = this.appearance;
-		this.appearance = newAppearance;
-
-		if (newAppearance.type !== oldAppearance?.type) {
-			this.appearanceEditor = new APPEARANCE_EDITORS[newAppearance.type]();
-
-			Object.defineProperties(this.appearanceEditor, {
-				nav: { get: () => this.nav },
-				plugin: { value: this.plugin },
-				containerEl: { value: this.appearanceEditorEl },
-				setAppearance: { value: this.onSetAppearance.bind(this) },
-			});
-		}
-
-		const { appearanceEditor } = this;
-		appearanceEditor.appearance = newAppearance;
-		appearanceEditor.callout = this.callout;
-	}
-
 	protected onSetAppearance(appearance: Appearance) {
-		this.changeAppearanceEditor(appearance);
-		const newSettings = this.appearanceEditor.toSettings();
+		const editor = makeAppearanceEditor(appearance);
+		const newSettings = editor.toSettings();
 		const { callout } = this;
 
 		// Update the plugin settings.
@@ -109,9 +85,8 @@ export class EditCalloutPane extends UIPane {
 		// Rerender to show what changed.
 		this.previewSection.changeSettings(newSettings);
 
-		this.appearanceEditor.callout = callout;
 		this.appearanceEditorEl.empty();
-		this.appearanceEditor.render();
+		editor.render(this.appearanceEditorEl, callout, () => this.nav, this.plugin, this.onSetAppearance.bind(this));
 
 		this.containerEl.empty();
 		this.display();
@@ -160,19 +135,14 @@ export class EditCalloutPane extends UIPane {
 	 * @param markdown The markdown to render.
 	 */
 	public async changeSettings(settings: CalloutSettings): Promise<void> {
-		this.changeAppearanceEditor(determineAppearanceType(settings));
+		const editor = makeAppearanceEditor(determineAppearanceType(settings));
 		this.appearanceEditorEl.empty();
-		this.appearanceEditor.render();
+		editor.render(this.appearanceEditorEl, this.callout, () => this.nav, this.plugin, this.onSetAppearance.bind(this));
 		this.miscEditor.render();
 
 		await this.previewSection.changeSettings(settings);
 	}
 }
-
-const APPEARANCE_EDITORS: Record<Appearance['type'], { new (): AppearanceEditor<Appearance> }> = {
-	complex: ComplexAppearanceEditor,
-	unified: UnifiedAppearanceEditor,
-};
 
 declare const STYLES: `
 	// Sections of the pane.
