@@ -1,6 +1,6 @@
 import { App } from 'obsidian';
 import { getCurrentColorScheme, getCurrentThemeID } from 'obsidian-extra';
-import { ThemeID } from 'obsidian-undocumented';
+import type { ThemeID } from 'obsidian-undocumented';
 
 import { CalloutID } from '&callout';
 

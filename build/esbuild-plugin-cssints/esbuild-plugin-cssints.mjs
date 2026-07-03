@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { dirname, join, relative } from 'path';
 import { cwd } from 'process';
 import * as sass from 'sass';
-import sorcery from 'sorcery';
+import { loadSync as sorceryLoadSync } from 'sorcery';
 import { SourceMapGenerator } from 'source-map';
 import ts from 'typescript';
 
@@ -106,7 +106,7 @@ export default function essbuildCssInJs(options) {
 					};
 
 					// Combine the two sourcemaps.
-					const chain = sorcery.loadSync(sassSourcemap.file, {
+					const chain = sorceryLoadSync(sassSourcemap.file, {
 						content: {
 							...sourcemapSources,
 							[extractSourcemap.file]: stylesheet,
