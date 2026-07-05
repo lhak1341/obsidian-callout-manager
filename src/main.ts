@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, setIcon } from 'obsidian';
 import { CustomStyleSheet, createCustomStyleSheet } from 'obsidian-extra';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
@@ -78,6 +78,33 @@ export default class CalloutManagerPlugin extends Plugin {
 		};
 		this.registerEvent(this.app.workspace.on('css-change', reapplyDebounced));
 		this.registerEvent(this.app.workspace.on('layout-change', reapplyDebounced));
+
+		// Re-inject icons for callouts where Obsidian skipped icon injection.
+		//
+		// Obsidian's callout post-processor runs on elements while they are still detached
+		// from the DOM, so getComputedStyle returns empty values and icon injection silently
+		// no-ops. This affects contexts like the community plugin info page. A MutationObserver
+		// fires after insertion, at which point the CSS cascade is live and the correct
+		// --callout-icon value is available.
+		const injectMissingCalloutIcons = (root: HTMLElement) => {
+			const callouts: HTMLElement[] = root.classList.contains('callout') ? [root] : [];
+			callouts.push(...root.querySelectorAll<HTMLElement>('.callout'));
+			for (const callout of callouts) {
+				const iconEl = callout.querySelector<HTMLElement>('.callout-icon');
+				if (!iconEl || iconEl.childElementCount > 0) continue;
+				const icon = getComputedStyle(callout).getPropertyValue('--callout-icon').trim();
+				if (icon) setIcon(iconEl, icon);
+			}
+		};
+		const iconObserver = new MutationObserver((mutations) => {
+			for (const mutation of mutations) {
+				for (const node of mutation.addedNodes) {
+					if (node instanceof HTMLElement) injectMissingCalloutIcons(node);
+				}
+			}
+		});
+		iconObserver.observe(document.body, { childList: true, subtree: true });
+		this.register(() => iconObserver.disconnect());
 
 		// Register setting tab.
 		this.settingTab = new UISettingTab(this, () => new ManageCalloutsPane(this.repository));

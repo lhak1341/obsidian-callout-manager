@@ -1,6 +1,8 @@
 # Callout Manager (lhak fork)
 
 ## Gotchas
+- `registerMarkdownPostProcessor` runs on detached elements — `getComputedStyle` CSS custom properties are empty there (no cascade context). For anything that must read a CSS var after insertion (e.g. `--callout-icon` → `setIcon`), use a `MutationObserver` on `document.body` with `{ childList: true, subtree: true }` instead; it fires after elements are live in the DOM.
+- `--callout-color` cascades passively (works even in Settings renderers like the community plugin page), but `--callout-icon` requires an active `setIcon()` call timed to DOM insertion — if color is correct but icon is missing, the injection fired before or without DOM attachment.
 - After changing `minAppVersion` in `package.json`, also update `manifest.json` manually — ESLint reads `manifest.json` directly and the build only regenerates it during `bun run build:plugin`.
 - `getComputedStyle().getPropertyValue('--custom-property')` returns the raw token string in Chromium (e.g. `var(--color-yellow)`), not the resolved value — propagating resolver-read values to aliases bakes in a static concrete colour that diverges from the live document.
 - When debugging colour/alias bugs, read the vault data.json first (`~/.../lhakZettel/.obsidian/plugins/callout-manager/data.json`) — many "built-in" callouts have explicit colour/icon settings stored there that affect alias propagation.
