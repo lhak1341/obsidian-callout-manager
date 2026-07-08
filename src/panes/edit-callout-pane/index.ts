@@ -62,7 +62,7 @@ export class EditCalloutPane extends UIPane {
 		);
 
 		new Setting(this.appearanceEditorContainerEl).setName('Appearance').setHeading();
-		this.appearanceEditorEl = this.appearanceEditorContainerEl.createDiv();
+		this.appearanceEditorEl = this.appearanceEditorContainerEl.createDiv('setting-group').createDiv('setting-items');
 
 		this.changeSettings(plugin.getCalloutSettings(id) ?? []);
 	}

@@ -11,6 +11,7 @@
 - Panes take `CalloutStore` (`src/callout-store.ts`), not `CalloutManagerPlugin` — the interface is the seam.
 - `CalloutRepository` (`src/callout-repository.ts`) is the concrete `CalloutStore`; `main.ts` holds it as `this.repository` and hands it to panes, commands, and the API layer.
 - `applyStyles` is a closure inside `onload`, not a class method — it closes over the live `settings` object so the `onSave` mutation callback and the `css-change` reapply handler share the same function. Do not extract it to a method.
+- Grouped `Setting` rows must be wrapped in `containerEl.createDiv('setting-group').createDiv('setting-items')` (pass the inner div to `new Setting(...)`) — otherwise Obsidian renders them without native card padding/background. See manage-callouts-pane.ts, create-callout-pane.ts, edit-callout-pane/index.ts, misc-editor.ts.
 
 ## Testing
 - Use `bun run test` (jest) or `bun test` (bun runner). Both pass 33 tests.

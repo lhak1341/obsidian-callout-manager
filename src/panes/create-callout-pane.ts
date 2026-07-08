@@ -55,7 +55,8 @@ export class CreateCalloutPane extends UIPane {
 	public display(): void {
 		const { containerEl } = this;
 
-		containerEl.appendChild(this.fieldId.settingEl);
+		const itemsEl = containerEl.createDiv('setting-group').createDiv('setting-items');
+		itemsEl.appendChild(this.fieldId.settingEl);
 		containerEl.createDiv().appendChild(this.btnCreate);
 	}
 }

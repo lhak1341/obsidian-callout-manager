@@ -70,18 +70,20 @@ export class ManageCalloutsPane extends UIPane {
 
 		containerEl.empty();
 
-		if (this.isCreating) {
-			this.renderCreateRow(containerEl);
-		}
-
-		for (const callout of this.filteredCallouts) {
-			this.renderCalloutRow(containerEl, callout);
-		}
-
 		if (!this.isCreating && this.filteredCallouts.length === 0) {
 			containerEl
 				.createDiv({ cls: 'calloutmanager-centerbox' })
 				.createEl('p', { text: 'No callouts found.', cls: 'calloutmanager-search-empty' });
+		} else {
+			const itemsEl = containerEl.createDiv('setting-group').createDiv('setting-items');
+
+			if (this.isCreating) {
+				this.renderCreateRow(itemsEl);
+			}
+
+			for (const callout of this.filteredCallouts) {
+				this.renderCalloutRow(itemsEl, callout);
+			}
 		}
 
 		if (scrollTop > 0 && scrollEl) {

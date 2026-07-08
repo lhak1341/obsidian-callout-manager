@@ -38,8 +38,10 @@ export class MiscEditor {
 	public render(): void {
 		this.containerEl.empty();
 		if (this.viewOnly) return;
+		if (this.renameSetting == null) return;
 
-		if (this.renameSetting != null) this.containerEl.appendChild(this.renameSetting.settingEl);
+		const itemsEl = this.containerEl.createDiv('setting-group').createDiv('setting-items');
+		itemsEl.appendChild(this.renameSetting.settingEl);
 	}
 
 	protected createRenameSetting(): Setting | null {
