@@ -9,6 +9,7 @@ import { resolveColorToRgb } from '&color';
 
 import { determineAppearanceType } from '../callout-appearance';
 import { isValidCalloutId } from '../util/callout-id';
+import { IconSuggest } from '&ui/component/icon-suggest';
 
 import { defaultColors } from '../default_colors.json';
 
@@ -87,7 +88,7 @@ export class ManageCalloutsPane extends UIPane {
 		}
 
 		if (scrollTop > 0 && scrollEl) {
-			activeWindow.requestAnimationFrame(() => { scrollEl.scrollTop = scrollTop; });
+			window.requestAnimationFrame(() => { scrollEl.scrollTop = scrollTop; });
 		}
 	}
 
@@ -100,7 +101,7 @@ export class ManageCalloutsPane extends UIPane {
 
 			const nameInput = setting.nameEl.createEl('input', {
 				cls: 'calloutmanager-row-name-input',
-				attr: { type: 'text', placeholder: 'callout-id' },
+				attr: { type: 'text', placeholder: 'Callout-id' },
 			});
 
 			const doCreate = () => {
@@ -140,7 +141,7 @@ export class ManageCalloutsPane extends UIPane {
 					}),
 			);
 
-			activeWindow.setTimeout(() => nameInput.focus(), 0);
+			window.setTimeout(() => nameInput.focus(), 0);
 		});
 	}
 
@@ -151,6 +152,7 @@ export class ManageCalloutsPane extends UIPane {
 		// Read current color + icon overrides from saved settings.
 		const savedSettings = plugin.getCalloutSettings(callout.id);
 		const appearance = savedSettings ? determineAppearanceType(savedSettings) : null;
+		const isComplex = appearance?.type === 'complex';
 		let currentColor = appearance?.type === 'unified' ? (appearance.color ?? '') : '';
 		let currentIcon = appearance?.type === 'unified' ? (appearance.otherChanges.icon ?? '') : '';
 
@@ -163,7 +165,6 @@ export class ManageCalloutsPane extends UIPane {
 		};
 
 		const isCustomOnly = callout.sources.length === 1 && callout.sources[0].type === 'custom';
-		const aliases = aliasGroups[callout.id] as string[] | undefined;
 
 		new Setting(containerEl).then((setting) => {
 			// === Left side: icon (colored to match the callout) + title ===
@@ -229,7 +230,7 @@ export class ManageCalloutsPane extends UIPane {
 
 					const input = aliasRow.createEl('input', {
 						cls: 'calloutmanager-alias-input-sm',
-						attr: { type: 'text', placeholder: 'add alias…' },
+						attr: { type: 'text', placeholder: 'Add alias…' },
 					});
 					const doAdd = () => {
 						const val = input.value.trim().toLowerCase();
@@ -251,38 +252,45 @@ export class ManageCalloutsPane extends UIPane {
 				renderChips(currentAliases);
 			}
 
-			// === Right side: color dropdown ===
-			new DropdownComponent(setting.controlEl).then((dropdown) => {
-				dropdown.addOptions(defaultColors as Record<string, string>);
-				dropdown.setValue(currentColor);
-				dropdown.onChange((value) => {
-					currentColor = value;
-					setIconColor(value);
-					save();
+			// === Right side: color dropdown + icon input, or a note for complex (conditional) settings ===
+			if (isComplex) {
+				setting.controlEl.createSpan({
+					cls: 'calloutmanager-row-complex-note',
+					text: 'Complex settings — edit data.json manually',
 				});
-			});
+			} else {
+				new DropdownComponent(setting.controlEl).then((dropdown) => {
+					dropdown.addOptions(defaultColors as Record<string, string>);
+					dropdown.setValue(currentColor);
+					dropdown.onChange((value) => {
+						currentColor = value;
+						setIconColor(value);
+						save();
+					});
+				});
 
-			// === Icon text input (live preview updates the left icon) ===
-			const iconWrap = setting.controlEl.createSpan({ cls: 'calloutmanager-row-icon-wrap' });
-			const iconInput = iconWrap.createEl('input', {
-				cls: 'calloutmanager-row-icon-input',
-				attr: { type: 'text', placeholder: 'icon…', value: currentIcon },
-			});
+				const iconWrap = setting.controlEl.createSpan({ cls: 'calloutmanager-row-icon-wrap' });
+				const iconInput = iconWrap.createEl('input', {
+					cls: 'calloutmanager-row-icon-input',
+					attr: { type: 'text', placeholder: 'Icon…', value: currentIcon },
+				});
+				new IconSuggest(this.plugin.app, iconInput);
 
-			const refreshIconEl = (iconName: string) => {
-				iconEl.empty();
-				setIcon(iconEl, iconName || callout.icon || 'lucide-pencil');
-				setIconColor(currentColor);
-			};
+				const refreshIconEl = (iconName: string) => {
+					iconEl.empty();
+					setIcon(iconEl, iconName || callout.icon || 'lucide-pencil');
+					setIconColor(currentColor);
+				};
 
-			iconInput.addEventListener('input', () => {
-				refreshIconEl(iconInput.value.trim());
-			});
-			iconInput.addEventListener('change', () => {
-				currentIcon = iconInput.value.trim();
-				save();
-				refreshIconEl(currentIcon);
-			});
+				iconInput.addEventListener('input', () => {
+					refreshIconEl(iconInput.value.trim());
+				});
+				iconInput.addEventListener('change', () => {
+					currentIcon = iconInput.value.trim();
+					save();
+					refreshIconEl(currentIcon);
+				});
+			}
 
 			// === Delete (custom-only callouts) ===
 			if (isCustomOnly) {
@@ -367,6 +375,12 @@ declare const STYLES: `
 			stroke: var(--calloutmanager-row-icon-color);
 			color: var(--calloutmanager-row-icon-color);
 		}
+	}
+
+	.calloutmanager-row-complex-note {
+		color: var(--text-muted);
+		font-size: var(--font-ui-smaller);
+		font-style: italic;
 	}
 
 	.calloutmanager-row-name-input {
