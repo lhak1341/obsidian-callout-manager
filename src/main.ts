@@ -167,7 +167,6 @@ export default class CalloutManagerPlugin extends Plugin {
 	 * @internal
 	 */
 	public destroyApiHandle(version: 'v1', consumerPlugin: Plugin) {
-		if (version !== 'v1') throw new Error(`Unsupported Callout Manager API: ${version}`);
 		return this.api.destroyHandle(version, consumerPlugin);
 	}
 }

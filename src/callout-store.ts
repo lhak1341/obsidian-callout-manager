@@ -6,8 +6,6 @@ import { CalloutSettings } from './callout-settings';
 export interface CalloutReader {
 	readonly app: App;
 
-	getDefaultCalloutProperties(): { color: string; icon: string };
-
 	getCallouts(): Callout[];
 	getCallout(id: CalloutID): Callout | undefined;
 	hasCallout(id: CalloutID): boolean;

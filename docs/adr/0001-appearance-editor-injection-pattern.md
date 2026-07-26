@@ -1,8 +1,12 @@
 # ADR-0001: AppearanceEditor nav is late-bound; render() receives it as a thunk
 
-**Status**: Accepted  
+**Status**: Superseded  
 **Date**: 2026-07-03  
-**Updated**: 2026-07-03 — replaced injection protocol with factory + thunk; core constraint unchanged
+**Updated**: 2026-07-26 — superseded: `AppearanceEditor`/`EditCalloutPane` (this ADR's subject) were deleted in
+commit `58d7d30`, and the `nav`/`UIPaneNavigation` thunk mechanism itself (along with the rest of the unused
+pane-stacking machinery — `UIPaneLayers.push`/`pop`, suspend/restore, friend-injection) was deleted from
+`src/ui/pane.ts` and `src/ui/pane-layers.ts` after a grep across every pane confirmed zero live callers. `UIPane`
+is single-layer only now; see `src/ui/paned-setting-tab.ts`.
 
 ## Context
 

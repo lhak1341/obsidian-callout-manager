@@ -2,12 +2,11 @@ import { ButtonComponent, DropdownComponent, Setting, SliderComponent, TextCompo
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
-import { CalloutSettings, CalloutSettingsChanges } from '&callout-settings';
 import { CalloutStore } from '../callout-store';
 import { UIPane } from '&ui/pane';
 import { resolveColorToRgb } from '&color';
 
-import { determineAppearanceType } from '../callout-appearance';
+import { determineAppearanceType, unifiedAppearanceToSettings } from '../callout-appearance';
 import { isValidCalloutId } from '../util/callout-id';
 import { IconSuggest } from '&ui/component/icon-suggest';
 
@@ -224,11 +223,7 @@ export class ManageCalloutsPane extends UIPane {
 		let currentIcon = appearance?.type === 'unified' ? (appearance.otherChanges.icon ?? '') : '';
 
 		const save = () => {
-			const changes: CalloutSettingsChanges = {};
-			if (currentColor) changes.color = currentColor;
-			if (currentIcon) changes.icon = currentIcon;
-			const newSettings: CalloutSettings = Object.keys(changes).length ? [{ changes }] : [];
-			plugin.setCalloutSettings(callout.id, newSettings);
+			plugin.setCalloutSettings(callout.id, unifiedAppearanceToSettings(currentColor, currentIcon));
 		};
 
 		const isCustomOnly = callout.sources.length === 1 && callout.sources[0].type === 'custom';
@@ -419,11 +414,6 @@ export class ManageCalloutsPane extends UIPane {
 				this.display();
 			})
 			.then(({ buttonEl }) => buttonEl.classList.add('clickable-icon'));
-	}
-
-	/** @override */
-	protected restoreState(_state: unknown): void {
-		this.refresh();
 	}
 
 	/** @override */

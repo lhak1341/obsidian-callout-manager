@@ -1,6 +1,10 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { parseColorHex, parseColorRGB, parseColorRGBA } from './color';
+import { parseColorHex, parseColorRGB, parseColorRGBA, resolveColorToRgb } from './color';
+
+// The var(--x) probing branch needs a real Document (createDiv/getComputedStyle) and
+// isn't exercised here; these calls never reach that branch so the doc param is unused.
+const noDoc = null as unknown as Document;
 
 describe('parseColorRGB', () => {
 	test('rgb(i, i, i)', () => {
@@ -146,5 +150,26 @@ describe('parseColorHex', () => {
 		expect(parseColorHex(`#fffff`)).toBeNull();
 		expect(parseColorHex(`#fffffff`)).toBeNull();
 		expect(parseColorHex(`#fffffffff`)).toBeNull();
+	});
+});
+
+describe('resolveColorToRgb', () => {
+	test('empty input', () => {
+		expect(resolveColorToRgb('', noDoc)).toBe('');
+	});
+
+	test('rgb triplet passthrough', () => {
+		expect(resolveColorToRgb('82, 139, 212', noDoc)).toBe('rgb(82, 139, 212)');
+	});
+
+	test('valid hex', () => {
+		expect(resolveColorToRgb('#086ddd', noDoc)).toBe('rgb(8, 109, 221)');
+		expect(resolveColorToRgb('#0cf', noDoc)).toBe('rgb(0, 204, 255)');
+	});
+
+	test('malformed hex does not silently produce NaN components', () => {
+		// A hand-rolled parser that only validates the red channel would turn this
+		// into 'rgb(0, NaN, NaN)'; the shared parser must reject it outright.
+		expect(resolveColorToRgb('#0gg', noDoc)).toBe('');
 	});
 });

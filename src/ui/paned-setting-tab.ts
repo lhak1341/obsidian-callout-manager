@@ -4,30 +4,31 @@ import { closeSettings } from 'obsidian-extra/unsafe';
 
 import CalloutManagerPlugin from '&plugin';
 
-import { UIPane } from './pane';
-import { UIPaneLayers } from './pane-layers';
+import { UIPane, UIPane_FRIEND } from './pane';
 
 /**
  * The settings tab (UI) that will show up under Obsidian's settings.
  *
- * This implements stacked navigation, where {@link UIPane}s may be stacked on top of eachother.
+ * Hosts a single {@link UIPane} at a time.
  */
 export class UISettingTab extends PluginSettingTab {
 	private readonly plugin: CalloutManagerPlugin;
-	private readonly layers: UIPaneLayers;
 	private readonly createDefault: () => UIPane;
 
 	private initLayer: UIPane | null;
+	private activePane: UIPane_FRIEND | undefined;
+
+	private titleEl!: HTMLElement;
+	private navEl!: HTMLElement;
+	private controlsEl!: HTMLElement;
+	private scrollEl!: HTMLElement;
+	private paneContainerEl!: HTMLElement;
 
 	public constructor(plugin: CalloutManagerPlugin, createDefault: () => UIPane) {
 		super(plugin.app, plugin);
 		this.plugin = plugin;
 		this.createDefault = createDefault;
-
 		this.initLayer = null;
-		this.layers = new UIPaneLayers(plugin, {
-			close: () => closeSettings(this.app),
-		});
 	}
 
 	public openWithPane(pane: UIPane) {
@@ -38,31 +39,31 @@ export class UISettingTab extends PluginSettingTab {
 	/** @override */
 	public hide(): void {
 		this.initLayer = null;
-		this.layers.clear();
+		this.closeActivePane();
 		super.hide();
 	}
 
 	public display(): void {
-		const { containerEl, layers } = this;
+		const { containerEl } = this;
 
 		// Clear the container and create the elements.
 		containerEl.empty();
 		containerEl.classList.add('calloutmanager-setting-tab', 'calloutmanager-pane');
 
 		const headerEl = containerEl.createDiv({ cls: 'calloutmanager-setting-tab-header' });
-		layers.navEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-nav' });
-		layers.titleEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-title' });
+		this.navEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-nav' });
+		this.titleEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-title' });
 
-		const controlsEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-controls' });
-		layers.controlsEl = controlsEl.createDiv();
-		layers.scrollEl = containerEl.createDiv({
+		const headerControlsEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-controls' });
+		this.controlsEl = headerControlsEl.createDiv();
+		this.scrollEl = containerEl.createDiv({
 			cls: 'calloutmanager-setting-tab-viewport vertical-tab-content',
 		});
-		layers.containerEl = layers.scrollEl.createDiv({ cls: 'calloutmanager-setting-tab-content' });
+		this.paneContainerEl = this.scrollEl.createDiv({ cls: 'calloutmanager-setting-tab-content' });
 
 		// Create a close button, since the native one is covered.
-		const closeBtn = new ButtonComponent(controlsEl);
-		closeBtn.setIcon("lucide-x");
+		const closeBtn = new ButtonComponent(headerControlsEl);
+		closeBtn.setIcon('lucide-x');
 		closeBtn.buttonEl.classList.add('modal-close-button');
 		closeBtn.buttonEl.classList.add('mod-raised');
 		closeBtn.buttonEl.classList.add('clickable-icon');
@@ -71,13 +72,68 @@ export class UISettingTab extends PluginSettingTab {
 			closeSettings(this.app);
 		});
 
-		// Clear the layers.
-		layers.clear();
-
-		// Render the top layer (or the default).
-		const initLayer = this.initLayer ?? this.createDefault();
+		// Close any previous pane, then render the pane (or the default).
+		this.closeActivePane();
+		const pane = this.initLayer ?? this.createDefault();
 		this.initLayer = null;
-		layers.top = initLayer;
+		this.setActivePane(pane);
+	}
+
+	private setActivePane(pane: UIPane): void {
+		const newPane = (this.activePane = pane as unknown as UIPane_FRIEND);
+		this.setPaneVariables(newPane, true);
+		newPane.onReady();
+		this.renderActivePane();
+		this.scrollEl.scrollTo({ top: 0, left: 0 });
+	}
+
+	private closeActivePane(cancelled = false): void {
+		const { activePane } = this;
+		if (activePane === undefined) {
+			return;
+		}
+
+		this.activePane = undefined;
+		this.setPaneVariables(activePane, false);
+		activePane.onClose(cancelled);
+	}
+
+	private renderActivePane(): void {
+		const { activePane, titleEl, controlsEl, paneContainerEl } = this;
+		if (activePane === undefined) {
+			return;
+		}
+
+		titleEl.empty();
+
+		controlsEl.empty();
+		activePane.displayControls();
+
+		const hasControls = controlsEl.childElementCount > 0;
+		this.navEl.parentElement?.classList.toggle('calloutmanager-setting-tab-header--active', hasControls);
+
+		paneContainerEl.empty();
+		activePane.display();
+	}
+
+	private setPaneVariables(pane: UIPane_FRIEND, attached: boolean) {
+		const notAttachedError = () => {
+			throw new Error('Not attached');
+		};
+
+		Object.defineProperties<UIPane_FRIEND>(pane, {
+			containerEl: {
+				configurable: true,
+				enumerable: true,
+				get: attached ? () => this.paneContainerEl : notAttachedError,
+			},
+
+			controlsEl: {
+				configurable: true,
+				enumerable: true,
+				get: attached ? () => this.controlsEl : notAttachedError,
+			},
+		});
 	}
 }
 
@@ -106,7 +162,7 @@ declare const STYLES: `
 		}
 	}
 
-	// The setting tab header — hidden at root, shown when navigated into a sub-pane.
+	// The setting tab header — hidden at root, shown when the pane renders controls.
 	.calloutmanager-setting-tab-header {
 		display: none;
 		align-items: center;

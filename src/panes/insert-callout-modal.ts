@@ -2,6 +2,7 @@ import { MarkdownView, Modal, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
+import { resolveColorToRgb } from '&color';
 import { CalloutStore } from '../callout-store';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
 
@@ -207,7 +208,8 @@ export class InsertCalloutModal extends Modal {
 
 			const iconEl = chip.createSpan({ cls: 'calloutmanager-insert-chip-icon' });
 			setIcon(iconEl, callout.icon || 'lucide-pencil');
-			this.applyIconColor(iconEl, callout.color ?? '');
+			const rgb = resolveColorToRgb(callout.color ?? '', activeDocument);
+			if (rgb) iconEl.style.setProperty('--calloutmanager-insert-icon-color', rgb);
 
 			chip.createSpan({ cls: 'calloutmanager-insert-chip-label', text: getTitleFromCallout(callout) });
 
@@ -235,31 +237,6 @@ export class InsertCalloutModal extends Modal {
 		if (this.filteredCallouts.length === 0) {
 			gridEl.createEl('p', { cls: 'calloutmanager-insert-empty', text: 'No callouts found.' });
 		}
-	}
-
-	private applyIconColor(iconEl: HTMLElement, raw: string): void {
-		if (!raw) return;
-		let value = raw;
-		if (raw.startsWith('var(')) {
-			const varName = raw.match(/var\((--[^)]+)\)/)?.[1] ?? '';
-			if (!varName) return;
-			const probe = activeDocument.body.createDiv();
-			value = (activeDocument.defaultView ?? window).getComputedStyle(probe).getPropertyValue(varName).trim();
-			probe.remove();
-			if (!value) return;
-		}
-		let rgb = '';
-		if (/^\d/.test(value)) {
-			rgb = `rgb(${value})`;
-		} else if (value.startsWith('#')) {
-			const h = value.slice(1);
-			const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-			const r = parseInt(full.slice(0, 2), 16);
-			const g = parseInt(full.slice(2, 4), 16);
-			const b = parseInt(full.slice(4, 6), 16);
-			if (!isNaN(r)) rgb = `rgb(${r}, ${g}, ${b})`;
-		}
-		if (rgb) iconEl.style.setProperty('--calloutmanager-insert-icon-color', rgb);
 	}
 
 	private refreshPreview(): void {

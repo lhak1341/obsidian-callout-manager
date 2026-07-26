@@ -52,19 +52,41 @@ export function migrateSettings(into: Settings, from: Settings | undefined) {
 	});
 }
 
+type SchemeAdjust = { saturation: number; lightness: number };
+
+function isValidSchemeAdjust(value: unknown): value is SchemeAdjust {
+	return (
+		value != null &&
+		typeof value === 'object' &&
+		typeof (value as SchemeAdjust).saturation === 'number' &&
+		typeof (value as SchemeAdjust).lightness === 'number'
+	);
+}
+
 /**
  * Migrates `iconColorAdjust` from its legacy flat `{ saturation, lightness }` shape (applied to
  * both color schemes alike) to the current per-scheme shape.
+ *
+ * Falls back to `fallback` (discarding the persisted value) if `from` doesn't match either the
+ * current or legacy shape, or if it matches but its saturation/lightness aren't actually numbers.
  */
-function migrateIconColorAdjust(
+export function migrateIconColorAdjust(
 	from: unknown,
 	fallback: Settings['iconColorAdjust'],
 ): Settings['iconColorAdjust'] {
 	if (from == null || typeof from !== 'object') return fallback;
-	if ('light' in from && 'dark' in from) return from as Settings['iconColorAdjust'];
-	if ('saturation' in from) {
-		const legacy = from as { saturation: number; lightness: number };
-		return { light: { ...legacy }, dark: { ...legacy } };
+
+	if ('light' in from && 'dark' in from) {
+		const { light, dark } = from as { light: unknown; dark: unknown };
+		if (isValidSchemeAdjust(light) && isValidSchemeAdjust(dark)) {
+			return { light: { ...light }, dark: { ...dark } };
+		}
+		return fallback;
 	}
+
+	if ('saturation' in from && isValidSchemeAdjust(from)) {
+		return { light: { ...from }, dark: { ...from } };
+	}
+
 	return fallback;
 }

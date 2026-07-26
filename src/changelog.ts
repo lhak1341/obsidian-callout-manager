@@ -1,6 +1,7 @@
 import { Component, MarkdownRenderer } from 'obsidian';
 
 import Changelog from '../CHANGELOG.md';
+import { parseChangelogVersion } from './changelog-version';
 
 interface ChangelogSection {
 	version: string | undefined;
@@ -49,7 +50,7 @@ export function getSections(parent: Component): Map<string, ChangelogSection> {
 				el.removeAttribute('data-callout');
 			});
 
-			const version = /^\s*Version ([0-9.]+)\s*$/.exec(headingText)?.[1];
+			const version = parseChangelogVersion(headingText);
 			sections.set(version ?? heading.textContent, {
 				version: version,
 				contentsEl,

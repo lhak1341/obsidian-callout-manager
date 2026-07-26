@@ -1,23 +1,13 @@
-import { Component } from "obsidian";
-
-export interface UIPaneNavigation {
-	close(): void;
-	open(pane: UIPane<unknown>): void;
-	replace(pane: UIPane<unknown>): void;
-}
-
 export type UIPaneTitle = string | { title: string; subtitle: string };
 
 /**
  * A setting pane that exists within the setting tab.
  *
- * This has its own navigation and sticky header!
+ * This has its own sticky header!
  */
-export abstract class UIPane<S = unknown> {
-	protected readonly nav!: UIPaneNavigation;
+export abstract class UIPane {
 	protected readonly containerEl!: HTMLElement;
 	protected readonly controlsEl!: HTMLElement;
-	protected readonly root!: Component;
 
 	/**
 	 * The title of the pane.
@@ -46,41 +36,19 @@ export abstract class UIPane<S = unknown> {
 	 * @param cancelled If true, the user closed the pane with the escape key.
 	 */
 	protected onClose(cancelled: boolean): void {}
-
-	/**
-	 * Called to save the state of the setting pane.
-	 * This is used for suspending a pane when another pane covers it up.
-	 *
-	 * @returns The saved state.
-	 */
-	protected suspendState(): S {
-		return undefined as unknown as S;
-	}
-
-	/**
-	 * Called to load the state of the setting pane.
-	 * This is called before {@link display}.
-	 *
-	 * @param state The state to restore.
-	 */
-	protected restoreState(state: S): void {}
 }
 
 /**
  * A type for a {@link UIPane}, but with all properties exposed and writable.
  * @internal
  */
-export type UIPane_FRIEND<S = unknown> = {
-	-readonly [key in keyof UIPane<S>]: UIPane<S>[key];
+export type UIPane_FRIEND = {
+	-readonly [key in keyof UIPane]: UIPane[key];
 } & {
-	nav: UIPane<S>['nav'] | undefined;
-	containerEl: UIPane<S>['containerEl'] | undefined;
-	controlsEl: UIPane<S>['controlsEl'] | undefined;
-	root: UIPane<S>['root'] | undefined;
-	onReady: UIPane<S>['onReady'];
-	onClose: UIPane<S>['onClose'];
-	suspendState: UIPane<S>['suspendState'];
-	restoreState: UIPane<S>['restoreState'];
+	containerEl: UIPane['containerEl'] | undefined;
+	controlsEl: UIPane['controlsEl'] | undefined;
+	onReady: UIPane['onReady'];
+	onClose: UIPane['onClose'];
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

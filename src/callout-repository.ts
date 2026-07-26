@@ -6,13 +6,10 @@ import { CalloutSettings } from './callout-settings';
 import { CalloutStore } from './callout-store';
 import Settings from './settings';
 
-const IMPOSSIBLE_CALLOUT_ID = '[not a real callout]';
-
 export class CalloutRepository implements CalloutStore {
 	public readonly app: App;
 	private readonly settings: Settings;
 	private readonly callouts: CalloutCollection;
-	private readonly resolve: (id: string) => { color: string; icon: string };
 	private readonly onSave: (data: Settings) => void;
 	private readonly onCalloutChanged: (id: CalloutID) => void;
 
@@ -25,7 +22,6 @@ export class CalloutRepository implements CalloutStore {
 	) {
 		this.app = app;
 		this.settings = settings;
-		this.resolve = resolve;
 		this.onSave = onSave;
 		this.onCalloutChanged = onCalloutChanged;
 
@@ -35,10 +31,6 @@ export class CalloutRepository implements CalloutStore {
 		});
 
 		this.callouts.custom.add(...settings.callouts.custom);
-	}
-
-	public getDefaultCalloutProperties(): { color: string; icon: string } {
-		return this.resolve(IMPOSSIBLE_CALLOUT_ID);
 	}
 
 	public getCallouts(): Callout[] {

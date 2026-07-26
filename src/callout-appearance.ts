@@ -14,12 +14,15 @@ export type ComplexAppearance = {
 /**
  * Unified appearance.
  *
- * A single color and icon, applied unconditionally.
+ * A single color and icon, applied unconditionally. `customStyles` (or any future
+ * change the UI has no widget for) is not representable here — settings with such
+ * a change classify as {@link ComplexAppearance} instead, so this UI never silently
+ * discards a change it doesn't know how to edit.
  */
 export type UnifiedAppearance = {
 	type: 'unified';
 	color: string | undefined;
-	otherChanges: Exclude<CalloutSettingsChanges, { color: string }>;
+	otherChanges: { icon?: string };
 };
 
 export type Appearance = UnifiedAppearance | ComplexAppearance;
@@ -47,10 +50,27 @@ function determineUnifiedAppearance(settings: CalloutSettings): UnifiedAppearanc
 				// Duplicate change to the same property → complex
 				return null;
 			}
+			if (key !== 'color' && key !== 'icon') {
+				// A change this UI has no widget for (e.g. customStyles) → complex,
+				// so editing color/icon can never silently drop it.
+				return null;
+			}
 			(changes as Record<string, unknown>)[key] = value;
 		}
 	}
 
-	const { color, ...otherChanges } = changes;
-	return { type: 'unified', color, otherChanges };
+	const { color, icon } = changes;
+	return { type: 'unified', color, otherChanges: { icon } };
+}
+
+/**
+ * Builds the {@link CalloutSettings} for a {@link UnifiedAppearance}'s color/icon —
+ * the inverse of {@link determineUnifiedAppearance}. An empty string for either
+ * value means "no override"; if both are empty, the result is `[]`.
+ */
+export function unifiedAppearanceToSettings(color: string | undefined, icon: string | undefined): CalloutSettings {
+	const changes: CalloutSettingsChanges = {};
+	if (color) changes.color = color;
+	if (icon) changes.icon = icon;
+	return Object.keys(changes).length ? [{ changes }] : [];
 }
