@@ -14,6 +14,7 @@ export class InMemoryCalloutStore implements CalloutStore {
 	private readonly calloutMap: Map<CalloutID, Callout>;
 	private readonly settingsMap: Map<CalloutID, CalloutSettings>;
 	private readonly aliasGroupsData: Record<string, string[]>;
+	private readonly iconColorAdjustData: Record<'light' | 'dark', { saturation: number; lightness: number }>;
 
 	public constructor({
 		app,
@@ -30,6 +31,10 @@ export class InMemoryCalloutStore implements CalloutStore {
 		this.calloutMap = new Map(callouts.map((c) => [c.id, { ...c }]));
 		this.settingsMap = new Map(Object.entries(settings) as [CalloutID, CalloutSettings][]);
 		this.aliasGroupsData = { ...aliasGroups };
+		this.iconColorAdjustData = {
+			light: { saturation: 0, lightness: 0 },
+			dark: { saturation: 0, lightness: 0 },
+		};
 	}
 
 	public getDefaultCalloutProperties(): { color: string; icon: string } {
@@ -92,5 +97,13 @@ export class InMemoryCalloutStore implements CalloutStore {
 		} else {
 			this.aliasGroupsData[canonical] = aliases;
 		}
+	}
+
+	public getIconColorAdjust(scheme: 'light' | 'dark'): { saturation: number; lightness: number } {
+		return { ...this.iconColorAdjustData[scheme] };
+	}
+
+	public setIconColorAdjust(scheme: 'light' | 'dark', adjust: { saturation: number; lightness: number }): void {
+		this.iconColorAdjustData[scheme] = adjust;
 	}
 }

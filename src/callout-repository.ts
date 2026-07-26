@@ -66,6 +66,15 @@ export class CalloutRepository implements CalloutStore {
 		this.onSave(this.settings);
 	}
 
+	public getIconColorAdjust(scheme: 'light' | 'dark'): { saturation: number; lightness: number } {
+		return { ...this.settings.iconColorAdjust[scheme] };
+	}
+
+	public setIconColorAdjust(scheme: 'light' | 'dark', adjust: { saturation: number; lightness: number }): void {
+		this.settings.iconColorAdjust[scheme] = adjust;
+		this.onSave(this.settings);
+	}
+
 	public getCalloutSettings(id: CalloutID): CalloutSettings | undefined {
 		const calloutSettings = this.settings.callouts.settings;
 		if (!Object.prototype.hasOwnProperty.call(calloutSettings, id)) {

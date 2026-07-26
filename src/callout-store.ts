@@ -24,4 +24,7 @@ export interface CalloutStore extends CalloutReader {
 
 	getAliasGroups(): Record<string, string[]>;
 	setAliasGroup(canonical: string, aliases: string[]): void;
+
+	getIconColorAdjust(scheme: 'light' | 'dark'): { saturation: number; lightness: number };
+	setIconColorAdjust(scheme: 'light' | 'dark', adjust: { saturation: number; lightness: number }): void;
 }

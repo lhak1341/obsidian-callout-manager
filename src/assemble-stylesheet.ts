@@ -70,6 +70,7 @@ export function assembleStylesheet(
 	settings: Record<CalloutID, CalloutSettings>,
 	aliasGroups: Record<string, string[]>,
 	env: CalloutEnvironment,
+	iconColorAdjust?: Record<'light' | 'dark', { saturation: number; lightness: number }>,
 ): string {
 	const userOverrideCSS = Object.entries(settings)
 		.map(([id, s]) => calloutSettingsToCSS(id, s, env))
@@ -89,5 +90,37 @@ export function assembleStylesheet(
 		}
 	}
 
-	return [DEFAULT_CALLOUT_COLORS_CSS, ...aliasPropagationCSS, ...userOverrideCSS].join('\n\n');
+	const iconColorAdjustCSS = assembleIconColorAdjustCSS(iconColorAdjust?.[env.colorScheme]);
+
+	return [DEFAULT_CALLOUT_COLORS_CSS, ...aliasPropagationCSS, ...userOverrideCSS, iconColorAdjustCSS]
+		.filter(Boolean)
+		.join('\n\n');
+}
+
+/**
+ * Builds a global override that shifts every callout header's (icon + title text) saturation/
+ * lightness by a fixed offset, relative to its own resolved `--callout-color`. Obsidian's own
+ * CSS sets the icon's color via `.callout-icon .svg-icon { color: var(--callout-color) }`
+ * (two-class specificity) — a bare `.callout-icon` rule loses to it regardless of stylesheet
+ * order, so the override must match that selector exactly. The callout body/border are
+ * untouched.
+ *
+ * `--callout-color` isn't guaranteed to be an `R, G, B` triplet (per-callout overrides in
+ * data.json can be hex/named colors), so it's passed to `hsl(from ...)` as-is rather than
+ * wrapped in `rgb()`. The `s`/`l` calc offsets must stay unitless numbers, not `%` — this
+ * Chromium's relative-color implementation produces a wrong color when a `%` unit is added
+ * inside the calc() (confirmed via live obsidian eval), even though `%` is spec-legal here.
+ *
+ * Emits nothing when both offsets are zero, so default output is unchanged.
+ */
+function assembleIconColorAdjustCSS(adjust: { saturation: number; lightness: number } | undefined): string {
+	if (!adjust || (adjust.saturation === 0 && adjust.lightness === 0)) {
+		return '';
+	}
+
+	return (
+		`.callout-title, .callout-icon .svg-icon {\n` +
+		`\tcolor: hsl(from var(--callout-color) h calc(s + ${adjust.saturation}) calc(l + ${adjust.lightness}));\n` +
+		`}`
+	);
 }

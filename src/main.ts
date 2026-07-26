@@ -48,6 +48,7 @@ export default class CalloutManagerPlugin extends Plugin {
 				settings.callouts.settings,
 				settings.aliasGroups,
 				currentCalloutEnvironment(this.app),
+				settings.iconColorAdjust,
 			);
 			this.cssApplier.css = css;
 			this.calloutResolver.setCustomStyles(css);

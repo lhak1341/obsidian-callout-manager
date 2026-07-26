@@ -1,4 +1,4 @@
-import { ButtonComponent, DropdownComponent, Setting, TextComponent, setIcon } from 'obsidian';
+import { ButtonComponent, DropdownComponent, Setting, SliderComponent, TextComponent, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
@@ -71,6 +71,8 @@ export class ManageCalloutsPane extends UIPane {
 
 		containerEl.empty();
 
+		this.renderIconColorAdjustSection(containerEl);
+
 		if (!this.isCreating && this.filteredCallouts.length === 0) {
 			containerEl
 				.createDiv({ cls: 'calloutmanager-centerbox' })
@@ -90,6 +92,71 @@ export class ManageCalloutsPane extends UIPane {
 		if (scrollTop > 0 && scrollEl) {
 			window.requestAnimationFrame(() => { scrollEl.scrollTop = scrollTop; });
 		}
+	}
+
+	private renderIconColorAdjustSection(containerEl: HTMLElement): void {
+		const groupEl = containerEl.createDiv('setting-group').createDiv('setting-items');
+		this.renderIconColorAdjustScheme(groupEl, 'light', 'Light mode');
+		this.renderIconColorAdjustScheme(groupEl, 'dark', 'Dark mode');
+	}
+
+	private renderIconColorAdjustScheme(
+		containerEl: HTMLElement,
+		scheme: 'light' | 'dark',
+		label: string,
+	): void {
+		const { plugin } = this;
+		const adjust = plugin.getIconColorAdjust(scheme);
+
+		let satSlider: SliderComponent;
+		let lightSlider: SliderComponent;
+
+		new Setting(containerEl)
+			.setName(`${label} header color`)
+			.setHeading()
+			.then(({ settingEl }) => settingEl.classList.add('calloutmanager-adjust-heading'))
+			.addExtraButton((btn) =>
+				btn
+					.setIcon('lucide-rotate-ccw')
+					.setTooltip('Reset to 0')
+					.onClick(() => {
+						adjust.saturation = 0;
+						adjust.lightness = 0;
+						plugin.setIconColorAdjust(scheme, { ...adjust });
+						satSlider.setValue(0);
+						lightSlider.setValue(0);
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName('Saturation')
+			.setDesc(`Shift every callout header's (icon + title text) color saturation in ${label.toLowerCase()}.`)
+			.addSlider((slider) => {
+				satSlider = slider;
+				slider
+					.setLimits(-100, 100, 5)
+					.setValue(adjust.saturation)
+					.setDynamicTooltip()
+					.onChange((value) => {
+						adjust.saturation = value;
+						plugin.setIconColorAdjust(scheme, { ...adjust });
+					});
+			});
+
+		new Setting(containerEl)
+			.setName('Lightness')
+			.setDesc(`Shift every callout header's (icon + title text) color lightness in ${label.toLowerCase()}.`)
+			.addSlider((slider) => {
+				lightSlider = slider;
+				slider
+					.setLimits(-50, 50, 5)
+					.setValue(adjust.lightness)
+					.setDynamicTooltip()
+					.onChange((value) => {
+						adjust.lightness = value;
+						plugin.setIconColorAdjust(scheme, { ...adjust });
+					});
+			});
 	}
 
 	private renderCreateRow(containerEl: HTMLElement): void {
@@ -366,6 +433,20 @@ export class ManageCalloutsPane extends UIPane {
 }
 
 declare const STYLES: `
+	/* Obsidian's .setting-item-heading has no left/right padding by default (it's meant to sit
+	   flush against its container); match the 20px inset of the sibling slider rows it's grouped
+	   with here so the heading text and reset button aren't flush against the card edge. */
+	/* Bottom padding is trimmed (vs. the 20px on every other side) because the sibling row right
+	   below already contributes its own 20px top padding — full 20px here would double that gap. */
+	.calloutmanager-adjust-heading.setting-item-heading {
+		padding: var(--size-4-5) var(--size-4-5) var(--size-4-1);
+
+		.setting-item-name {
+			font-size: var(--font-ui-medium);
+			font-weight: var(--font-bold);
+		}
+	}
+
 	.calloutmanager-row-icon {
 		display: inline-flex;
 		margin-right: 0.35em;

@@ -12,6 +12,8 @@ export default interface Settings {
 	};
 	/** Maps a canonical callout ID to the list of aliases that inherit its color. */
 	aliasGroups: Record<string, string[]>;
+	/** Global saturation/lightness offset applied to every callout header's color, per color scheme. */
+	iconColorAdjust: Record<'light' | 'dark', { saturation: number; lightness: number }>;
 }
 
 /**
@@ -23,6 +25,10 @@ export function defaultSettings(): Settings {
 		aliasGroups: Object.fromEntries(
 			Object.entries(CALLOUT_ALIAS_GROUPS).map(([k, v]) => [k, [...v]]),
 		),
+		iconColorAdjust: {
+			light: { saturation: 0, lightness: 0 },
+			dark: { saturation: 0, lightness: 0 },
+		},
 	};
 }
 
@@ -42,5 +48,23 @@ export function migrateSettings(into: Settings, from: Settings | undefined) {
 		},
 		// Preserve user's alias customisations; fall back to defaults on first run.
 		aliasGroups: from?.aliasGroups ?? into.aliasGroups,
+		iconColorAdjust: migrateIconColorAdjust(from?.iconColorAdjust, into.iconColorAdjust),
 	});
+}
+
+/**
+ * Migrates `iconColorAdjust` from its legacy flat `{ saturation, lightness }` shape (applied to
+ * both color schemes alike) to the current per-scheme shape.
+ */
+function migrateIconColorAdjust(
+	from: unknown,
+	fallback: Settings['iconColorAdjust'],
+): Settings['iconColorAdjust'] {
+	if (from == null || typeof from !== 'object') return fallback;
+	if ('light' in from && 'dark' in from) return from as Settings['iconColorAdjust'];
+	if ('saturation' in from) {
+		const legacy = from as { saturation: number; lightness: number };
+		return { light: { ...legacy }, dark: { ...legacy } };
+	}
+	return fallback;
 }
