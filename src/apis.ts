@@ -29,7 +29,7 @@ export class CalloutManagerAPIs {
 		consumerPlugin: Plugin | undefined,
 		cleanupFunc: () => void,
 	): Promise<CalloutManager> {
-		if (version !== 'v1') throw new Error(`Unsupported Callout Manager API: ${version}`);
+		this.assertV1(version);
 
 		// If we aren't trying to create an owned handle, create and return an unowned one.
 		if (consumerPlugin == null) {
@@ -61,7 +61,7 @@ export class CalloutManagerAPIs {
 	 * @internal
 	 */
 	public destroyHandle(version: 'v1', consumerPlugin: Plugin) {
-		if (version !== 'v1') throw new Error(`Unsupported Callout Manager API: ${version}`);
+		this.assertV1(version);
 
 		const handle = this.handles.get(consumerPlugin);
 		if (handle == null) return;
@@ -74,5 +74,9 @@ export class CalloutManagerAPIs {
 		for (const handle of this.handles.values()) {
 			handle[emitter].trigger('change');
 		}
+	}
+
+	private assertV1(version: string): asserts version is 'v1' {
+		if (version !== 'v1') throw new Error(`Unsupported Callout Manager API: ${version}`);
 	}
 }

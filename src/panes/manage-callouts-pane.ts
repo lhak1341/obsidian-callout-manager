@@ -7,7 +7,7 @@ import { UIPane } from '&ui/pane';
 import { resolveColorToRgb } from '&color';
 
 import { determineAppearanceType, unifiedAppearanceToSettings } from '../callout-appearance';
-import { isValidCalloutId } from '../util/callout-id';
+import { isValidCalloutId, slugifyCalloutId } from '../util/callout-id';
 import { IconSuggest } from '&ui/component/icon-suggest';
 
 import { defaultColors } from '../default_colors.json';
@@ -171,7 +171,7 @@ export class ManageCalloutsPane extends UIPane {
 			});
 
 			const doCreate = () => {
-				const id = nameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
+				const id = slugifyCalloutId(nameInput.value);
 				if (!id || !isValidCalloutId(id) || this.plugin.hasCallout(id)) {
 					nameInput.focus();
 					return;
@@ -252,7 +252,7 @@ export class ManageCalloutsPane extends UIPane {
 					attr: { type: 'text', value: callout.id },
 				});
 				const doRename = () => {
-					const newId = nameInput.value.trim().toLowerCase().replace(/\s+/g, '-');
+					const newId = slugifyCalloutId(nameInput.value);
 					if (!newId || newId === callout.id) {
 						nameInput.value = callout.id;
 						return;

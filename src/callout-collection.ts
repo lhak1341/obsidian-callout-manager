@@ -1,6 +1,6 @@
-import { SnippetID, ThemeID } from 'obsidian-undocumented';
+import type { SnippetID, ThemeID } from 'obsidian-undocumented';
 
-import { Callout, CalloutID, CalloutSource } from '../api';
+import type { Callout, CalloutID, CalloutSource } from '../api';
 
 /**
  * A collection of Callout IDs.
@@ -245,7 +245,7 @@ class CachedCallout {
  * A container for callout IDs that came from a snippet.
  */
 class CalloutCollectionSnippets {
-	private data = new Map<SnippetID, Set<CalloutID>>();
+	private data: Map<SnippetID, Set<CalloutID>> = new Map();
 	private invalidate: CalloutCollection['invalidateSource'];
 
 	public constructor(invalidate: CalloutCollection['invalidateSource']) {
@@ -314,7 +314,7 @@ class CalloutCollectionSnippets {
  * A container for callout IDs that came from Obsidian's defaults.
  */
 class CalloutCollectionObsidian {
-	private data = new Set<CalloutID>();
+	private data: Set<CalloutID> = new Set();
 	private invalidate: CalloutCollection['invalidateSource'];
 
 	public constructor(invalidate: CalloutCollection['invalidateSource']) {
@@ -345,7 +345,7 @@ class CalloutCollectionObsidian {
  * A container for callout IDs that came from a theme.
  */
 class CalloutCollectionTheme {
-	private data = new Set<CalloutID>();
+	private data: Set<CalloutID> = new Set();
 	private invalidate: CalloutCollection['invalidateSource'];
 	private oldTheme: string | null;
 
@@ -365,7 +365,7 @@ class CalloutCollectionTheme {
 		const updated = (this.data = new Set(callouts));
 		this.oldTheme = theme;
 
-		if (this.oldTheme === theme) {
+		if (oldTheme === theme) {
 			const diffs = diff(old, updated);
 			this.invalidate(
 				{ type: 'theme', theme },

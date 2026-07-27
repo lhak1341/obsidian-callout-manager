@@ -43,19 +43,19 @@ export class CalloutManagerAPI_V1 implements CalloutManager<true> {
 
 	/** @override */
 	public on<E extends CalloutManagerEvent>(event: E, listener: CalloutManagerEventListener<E>): void {
-		if (this.consumer == null) {
-			throw new Error('Cannot listen for events without an API consumer.');
-		}
-
+		this.assertHasConsumer();
 		this[emitter].on(event, listener);
 	}
 
 	/** @override */
 	public off<E extends CalloutManagerEvent>(event: E, listener: CalloutManagerEventListener<E>): void {
+		this.assertHasConsumer();
+		this[emitter].off(event, listener);
+	}
+
+	private assertHasConsumer(): void {
 		if (this.consumer == null) {
 			throw new Error('Cannot listen for events without an API consumer.');
 		}
-
-		this[emitter].off(event, listener);
 	}
 }
