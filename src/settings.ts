@@ -1,6 +1,7 @@
 import { CalloutID } from '&callout';
 import { CalloutSettings } from './callout-settings';
 import { CALLOUT_ALIAS_GROUPS } from './callout-aliases';
+import { IconColorAdjust } from './callout-store';
 
 /**
  * The Callout Manager plugin settings.
@@ -13,7 +14,7 @@ export default interface Settings {
 	/** Maps a canonical callout ID to the list of aliases that inherit its color. */
 	aliasGroups: Record<string, string[]>;
 	/** Global saturation/lightness offset applied to every callout header's color, per color scheme. */
-	iconColorAdjust: Record<'light' | 'dark', { saturation: number; lightness: number }>;
+	iconColorAdjust: Record<'light' | 'dark', IconColorAdjust>;
 }
 
 /**
@@ -52,14 +53,12 @@ export function migrateSettings(into: Settings, from: Settings | undefined) {
 	});
 }
 
-type SchemeAdjust = { saturation: number; lightness: number };
-
-function isValidSchemeAdjust(value: unknown): value is SchemeAdjust {
+function isValidSchemeAdjust(value: unknown): value is IconColorAdjust {
 	return (
 		value != null &&
 		typeof value === 'object' &&
-		typeof (value as SchemeAdjust).saturation === 'number' &&
-		typeof (value as SchemeAdjust).lightness === 'number'
+		typeof (value as IconColorAdjust).saturation === 'number' &&
+		typeof (value as IconColorAdjust).lightness === 'number'
 	);
 }
 

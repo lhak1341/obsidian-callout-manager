@@ -7,7 +7,6 @@ Table of Contents:
 - Types
   - [`Callout`](#callout)
   - [`CalloutID`](#calloutid)
-  - [`CalloutSource`](#calloutsource)
 - Functions
   - [`getApi`](#getapi) (package import)
   - [`getCallouts`](#getcallouts)
@@ -46,12 +45,12 @@ class MyPlugin extends Plugin {
 ## Types
 
 ### `Callout`
-A callout and its properties.
+A callout and its properties. Every callout returned by this API was created through Callout
+Manager — there's no discovery of Obsidian's built-in, theme-provided, or snippet-provided callouts.
 > type **Callout** = {  
 > &nbsp;&nbsp;&nbsp; id: [CalloutID](#calloutid),  
 > &nbsp;&nbsp;&nbsp; color: string,  
 > &nbsp;&nbsp;&nbsp; icon: string,  
-> &nbsp;&nbsp;&nbsp; sources: Array<[CalloutSource](#calloutsource)>,  
 > }
 
 **id**: [CalloutID](#calloutid)  
@@ -59,35 +58,16 @@ The ID of the callout.
 This is the part that goes in the callout header.  
 
 **color**: string  
-The current color of the callout.  
-This is going to be a comma-delimited RGB tuple.  
+The current color of the callout, as a CSS color (hex, `rgb(...)`, or a CSS variable reference).  
 If you need to parse this, use [getColor](#getcolor).
 
 **icon**: string  
 The icon associated with the callout.
 
-**sources**: Array<[CalloutSource](#calloutsource)>  
-The list of known sources for the callout.  
-A source is a stylesheet that provides styles for a callout with this ID.
-
 ### `CalloutID`
 > type **CalloutID** = string;
 
 A type representing the ID of a callout.
-
-### `CalloutSource`
-> type **CalloutSource** =  
-> &nbsp;&nbsp;&nbsp; { type: "builtin"; } |  
-> &nbsp;&nbsp;&nbsp; { type: "custom"; } |  
-> &nbsp;&nbsp;&nbsp; { type: "snippet"; snippet: string } |  
-> &nbsp;&nbsp;&nbsp; { type: "theme"; theme: string }
-
-The source of a callout.
-
-- `builtin` callouts come from Obsidian.
-- `custom` callouts were added by Callout Manager.
-- `snippet` callouts were added by a user's CSS snippet.
-- `theme` callouts were added by the user's current theme.
 
 
 &nbsp;

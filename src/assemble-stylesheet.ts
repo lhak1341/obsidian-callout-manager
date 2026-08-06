@@ -1,6 +1,8 @@
 import type { CalloutID } from '&callout';
 import { CalloutEnvironment, CalloutSettings, calloutSettingsToCSS } from '&callout-settings';
 
+import { IconColorAdjust } from './callout-store';
+
 const DEFAULT_CALLOUT_COLORS_CSS = `
 .callout[data-callout='note'],
 .callout[data-callout='location'],
@@ -70,7 +72,7 @@ export function assembleStylesheet(
 	settings: Record<CalloutID, CalloutSettings>,
 	aliasGroups: Record<string, string[]>,
 	env: CalloutEnvironment,
-	iconColorAdjust?: Record<'light' | 'dark', { saturation: number; lightness: number }>,
+	iconColorAdjust?: Record<'light' | 'dark', IconColorAdjust>,
 ): string {
 	const userOverrideCSS = Object.entries(settings)
 		.map(([id, s]) => calloutSettingsToCSS(id, s, env))
@@ -112,15 +114,28 @@ export function assembleStylesheet(
  * inside the calc() (confirmed via live obsidian eval), even though `%` is spec-legal here.
  *
  * Emits nothing when both offsets are zero, so default output is unchanged.
+ *
+ * `saturation`/`lightness` are clamped to the same bounds as the settings UI's sliders
+ * (±100 / ±50) — this is the only write path `IconColorAdjustStore` doesn't itself validate
+ * (e.g. a hand-edited `data.json`), and an unclamped offset can push `hsl(from ...)` out of
+ * gamut (confirmed via live obsidian eval: extreme values produce a raw `color(srgb ...)`
+ * with negative/>1 components instead of a displayable color).
  */
-function assembleIconColorAdjustCSS(adjust: { saturation: number; lightness: number } | undefined): string {
+function assembleIconColorAdjustCSS(adjust: IconColorAdjust | undefined): string {
 	if (!adjust || (adjust.saturation === 0 && adjust.lightness === 0)) {
 		return '';
 	}
 
+	const saturation = clamp(adjust.saturation, -100, 100);
+	const lightness = clamp(adjust.lightness, -50, 50);
+
 	return (
 		`.callout-title, .callout-icon .svg-icon {\n` +
-		`\tcolor: hsl(from var(--callout-color) h calc(s + ${adjust.saturation}) calc(l + ${adjust.lightness}));\n` +
+		`\tcolor: hsl(from var(--callout-color) h calc(s + ${saturation}) calc(l + ${lightness}));\n` +
 		`}`
 	);
+}
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(max, Math.max(min, value));
 }

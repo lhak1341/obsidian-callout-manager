@@ -8,8 +8,8 @@ This is a personal fork of [eth-p/obsidian-callout-manager](https://github.com/e
 
 ## Features
 
-- **Browse and search all available callouts.**
-  Lists every callout Obsidian knows about — built-in, theme-provided, snippet-provided, and custom — with search and sort by name, color, or icon.
+- **Browse and search your callouts.**
+  Lists the callouts you've created through this plugin, with search and sort by name, color, or icon. There's no auto-discovery of Obsidian's built-in, theme-provided, or snippet-provided callouts — recreate the ones you want to style as custom callouts.
 
 - **Edit color and icon inline.**
   Pick a color and set an icon (with autocomplete) directly from the list, no separate dialog.

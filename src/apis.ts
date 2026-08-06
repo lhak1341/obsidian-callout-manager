@@ -4,13 +4,13 @@ import { CalloutID, CalloutManager } from '../api';
 
 import { destroy, emitter } from './api-common';
 import { CalloutManagerAPI_V1 } from './api-v1';
-import { CalloutStore } from './callout-store';
+import { CalloutReader } from './callout-store';
 
 export class CalloutManagerAPIs {
 	private readonly handles: Map<Plugin, CalloutManagerAPI_V1>;
-	private readonly store: CalloutStore;
+	private readonly store: CalloutReader;
 
-	public constructor(store: CalloutStore) {
+	public constructor(store: CalloutReader) {
 		this.store = store;
 		this.handles = new Map();
 	}

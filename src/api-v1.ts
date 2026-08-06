@@ -4,16 +4,16 @@ import { getColorFromCallout, getTitleFromCallout } from '&callout-util';
 
 import { Callout, CalloutManager } from '../api';
 import { CalloutManagerEvent, CalloutManagerEventListener } from '../api/events';
-import { CalloutStore } from './callout-store';
+import { CalloutReader } from './callout-store';
 import { destroy, emitter } from './api-common';
 
 export class CalloutManagerAPI_V1 implements CalloutManager<true> {
-	private readonly store: CalloutStore;
+	private readonly store: CalloutReader;
 	private readonly consumer: Plugin | undefined;
 
 	public readonly [emitter]: Events;
 
-	public constructor(store: CalloutStore, consumer: Plugin | undefined) {
+	public constructor(store: CalloutReader, consumer: Plugin | undefined) {
 		this.store = store;
 		this.consumer = consumer;
 		this[emitter] = new Events();

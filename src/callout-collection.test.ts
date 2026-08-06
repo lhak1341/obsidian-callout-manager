@@ -11,7 +11,7 @@ function makeCollection() {
 describe('CalloutCollection — resolving and caching', () => {
 	test('get() resolves a callout once and reuses the cache on repeated access', () => {
 		const { collection, resolver } = makeCollection();
-		collection.builtin.set(['note']);
+		collection.add('note');
 
 		collection.get('note');
 		collection.get('note');
@@ -22,7 +22,7 @@ describe('CalloutCollection — resolving and caching', () => {
 
 	test('invalidate() forces exactly one more resolve on next access', () => {
 		const { collection, resolver } = makeCollection();
-		collection.builtin.set(['note']);
+		collection.add('note');
 		collection.get('note');
 		expect(resolver).toHaveBeenCalledTimes(1);
 
@@ -35,7 +35,7 @@ describe('CalloutCollection — resolving and caching', () => {
 
 	test('values() resolves all invalidated callouts in one pass', () => {
 		const { collection, resolver } = makeCollection();
-		collection.builtin.set(['note', 'warning']);
+		collection.add('note', 'warning');
 
 		const callouts = collection.values();
 
@@ -45,7 +45,7 @@ describe('CalloutCollection — resolving and caching', () => {
 
 	test('has() and keys() do not force a resolve', () => {
 		const { collection, resolver } = makeCollection();
-		collection.builtin.set(['note']);
+		collection.add('note');
 
 		expect(collection.has('note')).toBe(true);
 		expect(collection.keys()).toStrictEqual(['note']);
@@ -58,153 +58,61 @@ describe('CalloutCollection — resolving and caching', () => {
 	});
 });
 
-describe('CalloutCollection — multi-source overlap', () => {
-	test('a callout present via two sources survives removal from one', () => {
-		const { collection } = makeCollection();
-		collection.builtin.set(['note']);
-		collection.custom.add('note');
-
-		collection.builtin.set([]);
-
-		expect(collection.has('note')).toBe(true);
-	});
-
-	test('a callout disappears only when the last source is removed', () => {
-		const { collection } = makeCollection();
-		collection.builtin.set(['note']);
-		collection.custom.add('note');
-
-		collection.builtin.set([]);
-		collection.custom.delete('note');
-
-		expect(collection.has('note')).toBe(false);
-	});
-
-	test('returned Callout.sources reflects every active source', () => {
-		const { collection } = makeCollection();
-		collection.builtin.set(['note']);
-		collection.custom.add('note');
-
-		const callout = collection.get('note');
-
-		expect(callout?.sources).toStrictEqual(
-			expect.arrayContaining([{ type: 'builtin' }, { type: 'custom' }]),
-		);
-		expect(callout?.sources).toHaveLength(2);
-	});
-});
-
 describe('CalloutCollection — hasChanged()', () => {
-	test('returns false until a source changes, true after', () => {
+	test('returns false until the collection changes, true after', () => {
 		const { collection } = makeCollection();
-		collection.builtin.set(['note']);
+		collection.add('note');
 		collection.values();
 
 		const changed = collection.hasChanged();
 		expect(changed()).toBe(false);
 
-		collection.builtin.set(['note', 'warning']);
+		collection.add('warning');
 		expect(changed()).toBe(true);
 	});
-});
 
-describe('CalloutCollection.builtin — generic diff-based invalidation', () => {
-	test('set() adds new callouts and they become visible', () => {
+	test('re-adding an existing id does not count as a change', () => {
 		const { collection } = makeCollection();
-		collection.builtin.set(['note']);
-		expect(collection.keys()).toStrictEqual(['note']);
-	});
+		collection.add('note');
 
-	test('set() with a removed id drops that callout from the collection', () => {
-		const { collection } = makeCollection();
-		collection.builtin.set(['note', 'warning']);
-		collection.builtin.set(['note']);
-		expect(collection.keys().sort()).toStrictEqual(['note']);
-	});
+		const changed = collection.hasChanged();
+		collection.add('note');
 
-	test('set() with an unchanged id invalidates it for re-resolve, not add/remove', () => {
-		const { collection, resolver } = makeCollection();
-		collection.builtin.set(['note']);
-		collection.get('note');
-		expect(resolver).toHaveBeenCalledTimes(1);
-
-		collection.builtin.set(['note']);
-		collection.get('note');
-
-		expect(resolver).toHaveBeenCalledTimes(2);
-		expect(collection.keys()).toStrictEqual(['note']);
+		expect(changed()).toBe(false);
 	});
 });
 
-describe('CalloutCollection.theme — switch vs same-theme update', () => {
-	test('setting the same theme twice diffs against the previous callout list', () => {
-		const { collection } = makeCollection();
-		collection.theme.set('Minimal', ['note']);
-		collection.theme.set('Minimal', ['note', 'warning']);
-
-		expect(collection.keys().sort()).toStrictEqual(['note', 'warning']);
-	});
-
-	test('switching to a different theme removes the old theme callouts and adds the new ones', () => {
-		const { collection } = makeCollection();
-		collection.theme.set('Minimal', ['old-note']);
-		collection.get('old-note');
-
-		collection.theme.set('California Coast', ['new-note']);
-
-		expect(collection.has('old-note')).toBe(false);
-		expect(collection.has('new-note')).toBe(true);
-	});
-
-	test('a callout kept across a theme switch under a different source survives', () => {
-		const { collection } = makeCollection();
-		collection.theme.set('Minimal', ['note']);
-		collection.custom.add('note');
-
-		collection.theme.set('California Coast', []);
-
-		expect(collection.has('note')).toBe(true);
-	});
-});
-
-describe('CalloutCollection.custom — explicit add/delete', () => {
+describe('CalloutCollection.add()/delete()', () => {
 	test('add() introduces new callouts; re-adding an existing id is a no-op invalidation-wise', () => {
 		const { collection, resolver } = makeCollection();
-		collection.custom.add('note');
+		collection.add('note');
 		collection.get('note');
 		expect(resolver).toHaveBeenCalledTimes(1);
 
-		collection.custom.add('note');
+		collection.add('note');
 		collection.get('note');
 
 		expect(resolver).toHaveBeenCalledTimes(1);
+	});
+
+	test('add() accepts multiple ids at once', () => {
+		const { collection } = makeCollection();
+		collection.add('note', 'warning');
+
+		expect(collection.keys().sort()).toStrictEqual(['note', 'warning']);
 	});
 
 	test('delete() removes the callout', () => {
 		const { collection } = makeCollection();
-		collection.custom.add('note');
-		collection.custom.delete('note');
+		collection.add('note');
+		collection.delete('note');
 
 		expect(collection.has('note')).toBe(false);
 	});
-});
 
-describe('CalloutCollection.snippets — per-snippet-ID keying', () => {
-	test('callouts from different snippets are tracked independently', () => {
+	test('delete() on an unknown id is a no-op', () => {
 		const { collection } = makeCollection();
-		collection.snippets.set('snippet-a', ['note']);
-		collection.snippets.set('snippet-b', ['warning']);
-
-		expect(collection.keys().sort()).toStrictEqual(['note', 'warning']);
-	});
-
-	test('deleting one snippet only removes its own callouts', () => {
-		const { collection } = makeCollection();
-		collection.snippets.set('snippet-a', ['note']);
-		collection.snippets.set('snippet-b', ['warning']);
-
-		collection.snippets.delete('snippet-a');
-
-		expect(collection.keys().sort()).toStrictEqual(['warning']);
+		expect(() => collection.delete('missing')).not.toThrow();
+		expect(collection.has('missing')).toBe(false);
 	});
 });

@@ -1,16 +1,12 @@
-import { ButtonComponent, DropdownComponent, Setting, SliderComponent, TextComponent, setIcon } from 'obsidian';
+import { ButtonComponent, Setting, SliderComponent, TextComponent, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
 import { CalloutStore } from '../callout-store';
 import { UIPane } from '&ui/pane';
-import { resolveColorToRgb } from '&color';
 
-import { determineAppearanceType, unifiedAppearanceToSettings } from '../callout-appearance';
 import { isValidCalloutId, slugifyCalloutId } from '../util/callout-id';
-import { IconSuggest } from '&ui/component/icon-suggest';
-
-import { defaultColors } from '../default_colors.json';
+import { makeCalloutRow } from '&ui/component/callout-row';
 
 /**
  * The user interface pane for managing callouts.
@@ -212,162 +208,10 @@ export class ManageCalloutsPane extends UIPane {
 	}
 
 	private renderCalloutRow(containerEl: HTMLElement, callout: Callout): void {
-		const { plugin } = this;
-		const aliasGroups = plugin.getAliasGroups();
-
-		// Read current color + icon overrides from saved settings.
-		const savedSettings = plugin.getCalloutSettings(callout.id);
-		const appearance = savedSettings ? determineAppearanceType(savedSettings) : null;
-		const isComplex = appearance?.type === 'complex';
-		let currentColor = appearance?.type === 'unified' ? (appearance.color ?? '') : '';
-		let currentIcon = appearance?.type === 'unified' ? (appearance.otherChanges.icon ?? '') : '';
-
-		const save = () => {
-			plugin.setCalloutSettings(callout.id, unifiedAppearanceToSettings(currentColor, currentIcon));
-		};
-
-		const isCustomOnly = callout.sources.length === 1 && callout.sources[0].type === 'custom';
-
-		new Setting(containerEl).then((setting) => {
-			// === Left side: icon (colored to match the callout) + title ===
-			const iconEl = setting.nameEl.createSpan({ cls: 'calloutmanager-row-icon' });
-			setIcon(iconEl, callout.icon || 'lucide-pencil');
-
-			const setIconColor = (colorValue: string) => {
-				const raw = colorValue || callout.color;
-				const rgbColor = resolveColorToRgb(raw, activeDocument);
-				if (rgbColor) {
-					iconEl.style.setProperty('--calloutmanager-row-icon-color', rgbColor);
-				} else {
-					iconEl.style.removeProperty('--calloutmanager-row-icon-color');
-				}
-			};
-
-			setIconColor(currentColor);
-
-			// === Name: editable inline input for custom callouts, static span otherwise ===
-			if (isCustomOnly) {
-				const nameInput = setting.nameEl.createEl('input', {
-					cls: 'calloutmanager-row-name-input',
-					attr: { type: 'text', value: callout.id },
-				});
-				const doRename = () => {
-					const newId = slugifyCalloutId(nameInput.value);
-					if (!newId || newId === callout.id) {
-						nameInput.value = callout.id;
-						return;
-					}
-					try {
-						plugin.renameCustomCallout(callout.id, newId);
-						this.refresh();
-					} catch {
-						nameInput.value = callout.id;
-					}
-				};
-				nameInput.addEventListener('blur', doRename);
-				nameInput.addEventListener('keydown', (e) => {
-					if (e.key === 'Enter') nameInput.blur();
-					if (e.key === 'Escape') { nameInput.value = callout.id; nameInput.blur(); }
-				});
-			} else {
-				setting.nameEl.createSpan({ text: getTitleFromCallout(callout) });
-			}
-
-			// === Alias chips (all callouts) ===
-			{
-				const currentAliases = aliasGroups[callout.id] ?? [];
-				const aliasRow = setting.nameEl.createDiv({ cls: 'calloutmanager-row-aliases' });
-
-				const renderChips = (list: string[]) => {
-					aliasRow.empty();
-					for (const alias of list) {
-						const chip = aliasRow.createSpan({ cls: 'calloutmanager-alias-chip', text: alias });
-						chip
-							.createEl('button', { cls: 'calloutmanager-alias-chip-remove', text: '×' })
-							.addEventListener('click', () => {
-								plugin.setAliasGroup(callout.id, list.filter((a) => a !== alias));
-								this.refresh();
-							});
-					}
-
-					const input = aliasRow.createEl('input', {
-						cls: 'calloutmanager-alias-input-sm',
-						attr: { type: 'text', placeholder: 'Add alias…' },
-					});
-					const doAdd = () => {
-						const val = input.value.trim().toLowerCase();
-						if (val && !list.includes(val)) {
-							plugin.setAliasGroup(callout.id, [...list, val]);
-							this.refresh();
-						} else {
-							input.value = '';
-						}
-					};
-					input.addEventListener('keydown', (e) => {
-						if (e.key === 'Enter') doAdd();
-					});
-					aliasRow
-						.createEl('button', { cls: 'calloutmanager-alias-add-btn', text: '+' })
-						.addEventListener('click', doAdd);
-				};
-
-				renderChips(currentAliases);
-			}
-
-			// === Right side: color dropdown + icon input, or a note for complex (conditional) settings ===
-			if (isComplex) {
-				setting.controlEl.createSpan({
-					cls: 'calloutmanager-row-complex-note',
-					text: 'Complex settings — edit data.json manually',
-				});
-			} else {
-				new DropdownComponent(setting.controlEl).then((dropdown) => {
-					dropdown.addOptions(defaultColors as Record<string, string>);
-					dropdown.setValue(currentColor);
-					dropdown.onChange((value) => {
-						currentColor = value;
-						setIconColor(value);
-						save();
-					});
-				});
-
-				const iconWrap = setting.controlEl.createSpan({ cls: 'calloutmanager-row-icon-wrap' });
-				const iconInput = iconWrap.createEl('input', {
-					cls: 'calloutmanager-row-icon-input',
-					attr: { type: 'text', placeholder: 'Icon…', value: currentIcon },
-				});
-				new IconSuggest(this.plugin.app, iconInput);
-
-				const refreshIconEl = (iconName: string) => {
-					iconEl.empty();
-					setIcon(iconEl, iconName || callout.icon || 'lucide-pencil');
-					setIconColor(currentColor);
-				};
-
-				iconInput.addEventListener('input', () => {
-					refreshIconEl(iconInput.value.trim());
-				});
-				iconInput.addEventListener('change', () => {
-					currentIcon = iconInput.value.trim();
-					save();
-					refreshIconEl(currentIcon);
-				});
-			}
-
-			// === Delete (custom-only callouts) ===
-			if (isCustomOnly) {
-				setting.addExtraButton((btn) =>
-					btn
-						.setIcon('lucide-trash')
-						.setTooltip('Delete callout')
-						.then(({ extraSettingsEl }) => extraSettingsEl.classList.add('mod-warning'))
-						.onClick(() => {
-							plugin.removeCustomCallout(callout.id);
-							this.refresh();
-						}),
-				);
-			}
-		});
+		makeCalloutRow(callout, this.plugin, {
+			refresh: () => this.refresh(),
+			isFiltering: () => this.searchQuery.trim().length > 0,
+		}).render(containerEl);
 	}
 
 	/** @override */

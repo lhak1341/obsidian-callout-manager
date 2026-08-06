@@ -61,7 +61,17 @@ describe('calloutSettingsToCSS', () => {
 	test('unconditional setting always applies', () => {
 		const css = calloutSettingsToCSS('info', [{ changes: { color: '0, 128, 255' } }], dark);
 		expect(css).toContain('[data-callout="info"]');
-		expect(css).toContain('--callout-color: 0, 128, 255');
+		expect(css).toContain('--callout-color: rgb(0, 128, 255)');
+	});
+
+	test('hex color is passed through, not wrapped in rgb()', () => {
+		const css = calloutSettingsToCSS('info', [{ changes: { color: '#3079b0' } }], dark);
+		expect(css).toContain('--callout-color: #3079b0');
+	});
+
+	test('var() color is passed through, not wrapped in rgb()', () => {
+		const css = calloutSettingsToCSS('info', [{ changes: { color: 'var(--color-blue)' } }], dark);
+		expect(css).toContain('--callout-color: var(--color-blue)');
 	});
 
 	test('condition-gated setting skipped when condition fails', () => {

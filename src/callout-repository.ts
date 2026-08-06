@@ -3,7 +3,7 @@ import { App } from 'obsidian';
 import type { Callout, CalloutID } from '../api';
 import { CalloutCollection } from './callout-collection';
 import { CalloutSettings } from './callout-settings';
-import { CalloutStore } from './callout-store';
+import { CalloutStore, IconColorAdjust } from './callout-store';
 import Settings from './settings';
 
 export class CalloutRepository implements CalloutStore {
@@ -30,15 +30,11 @@ export class CalloutRepository implements CalloutStore {
 			return { id, icon, color };
 		});
 
-		this.callouts.custom.add(...settings.callouts.custom);
+		this.callouts.add(...settings.callouts.custom);
 	}
 
 	public getCallouts(): Callout[] {
 		return this.callouts.values();
-	}
-
-	public getCallout(id: CalloutID): Callout | undefined {
-		return this.callouts.get(id);
 	}
 
 	public hasCallout(id: CalloutID): boolean {
@@ -58,11 +54,11 @@ export class CalloutRepository implements CalloutStore {
 		this.onSave(this.settings);
 	}
 
-	public getIconColorAdjust(scheme: 'light' | 'dark'): { saturation: number; lightness: number } {
+	public getIconColorAdjust(scheme: 'light' | 'dark'): IconColorAdjust {
 		return { ...this.settings.iconColorAdjust[scheme] };
 	}
 
-	public setIconColorAdjust(scheme: 'light' | 'dark', adjust: { saturation: number; lightness: number }): void {
+	public setIconColorAdjust(scheme: 'light' | 'dark', adjust: IconColorAdjust): void {
 		this.settings.iconColorAdjust[scheme] = adjust;
 		this.onSave(this.settings);
 	}
@@ -90,23 +86,19 @@ export class CalloutRepository implements CalloutStore {
 	}
 
 	public createCustomCallout(id: CalloutID): void {
-		this.callouts.custom.add(id);
-		this.settings.callouts.custom = this.callouts.custom.keys();
+		this.callouts.add(id);
+		this.settings.callouts.custom = this.callouts.keys();
 		this.onSave(this.settings);
 		this.onCalloutChanged(id);
 	}
 
 	public renameCustomCallout(oldId: CalloutID, newId: CalloutID): void {
-		const callout = this.callouts.get(oldId);
-		if (callout == null) throw new Error(`Callout '${oldId}' does not exist.`);
-		if (this.callouts.get(newId) != null) throw new Error(`Callout '${newId}' already exists.`);
-		if (callout.sources.length !== 1 || callout.sources[0].type !== 'custom') {
-			throw new Error(`Cannot rename non-custom callout '${oldId}'.`);
-		}
+		if (!this.callouts.has(oldId)) throw new Error(`Callout '${oldId}' does not exist.`);
+		if (this.callouts.has(newId)) throw new Error(`Callout '${newId}' already exists.`);
 
-		this.callouts.custom.delete(oldId);
-		this.callouts.custom.add(newId);
-		this.settings.callouts.custom = this.callouts.custom.keys();
+		this.callouts.delete(oldId);
+		this.callouts.add(newId);
+		this.settings.callouts.custom = this.callouts.keys();
 		this.settings.callouts.settings[newId] = this.settings.callouts.settings[oldId];
 		delete this.settings.callouts.settings[oldId];
 
@@ -116,13 +108,9 @@ export class CalloutRepository implements CalloutStore {
 	}
 
 	public removeCustomCallout(id: CalloutID): void {
-		this.callouts.custom.delete(id);
-		this.settings.callouts.custom = this.callouts.custom.keys();
-
-		const calloutInstance = this.callouts.get(id);
-		if (calloutInstance == null || calloutInstance.sources.length < 1) {
-			delete this.settings.callouts.settings[id];
-		}
+		this.callouts.delete(id);
+		this.settings.callouts.custom = this.callouts.keys();
+		delete this.settings.callouts.settings[id];
 
 		this.onSave(this.settings);
 		this.onCalloutChanged(id);

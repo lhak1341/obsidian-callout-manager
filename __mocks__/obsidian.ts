@@ -1,5 +1,11 @@
 import type { SearchResult } from 'obsidian';
 
+export class Events {
+	on() {}
+	off() {}
+	trigger() {}
+}
+
 export function prepareFuzzySearch(query: string): (text: string) => SearchResult | null {
 	return (text) => {
 		// TODO: A real fuzzy search mock.

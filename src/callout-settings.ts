@@ -19,6 +19,20 @@ export function currentCalloutEnvironment(app: App): CalloutEnvironment {
 	};
 }
 
+const COLOR_TRIPLET = /^\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*$/;
+
+/**
+ * Normalizes a stored `color` value into a valid CSS `<color>`.
+ *
+ * Most values (hex, `var(...)`) are already valid CSS colors and must be passed through as-is —
+ * wrapping them in `rgb(...)` produces invalid nested syntax (e.g. `rgb(#3079b0)`), which silently
+ * drops the callout's background/border color. Only a bare `R, G, B` triplet (the legacy upstream
+ * convention) needs the `rgb(...)` wrapper to become valid on its own.
+ */
+function toCssColor(color: string): string {
+	return COLOR_TRIPLET.test(color) ? `rgb(${color})` : color;
+}
+
 /**
  * Converts callout settings to CSS that applies the setting.
  *
@@ -57,7 +71,7 @@ export function calloutSettingsToStyles(
 
 		// Build the styles.
 		const { changes } = setting;
-		if (changes.color != null) styles.push(`--callout-color: ${changes.color}`);
+		if (changes.color != null) styles.push(`--callout-color: ${toCssColor(changes.color)}`);
 		if (changes.icon != null) styles.push(`--callout-icon: ${changes.icon}`);
 		if (changes.customStyles != null) styles.push(changes.customStyles);
 	}
@@ -104,37 +118,6 @@ export function checkCondition(
 	return false;
 }
 
-/**
- * Returns true if the condition is not an elementary condition.
- *
- * @param condition The condition to check.
- * @returns True if the condition is not elementary.
- */
-export function isComplexCondition(condition: CalloutSettingsCondition): boolean {
-	const type = typeofCondition(condition);
-	return type === 'and' || type === 'or';
-}
-
-/**
- * Returns the type of condition of the provided condition.
- *
- * @param condition The condition.
- * @returns The condition type.
- */
-export function typeofCondition(condition: CalloutSettingsCondition): CalloutSettingsConditionType | undefined {
-	if (condition === undefined) return undefined;
-	const hasOwnProperty = Object.prototype.hasOwnProperty.bind(condition) as (
-		type: CalloutSettingsConditionType,
-	) => boolean;
-
-	if (hasOwnProperty('colorScheme')) return 'colorScheme';
-	if (hasOwnProperty('theme')) return 'theme';
-	if (hasOwnProperty('and')) return 'and';
-	if (hasOwnProperty('or')) return 'or';
-
-	throw new Error(`Unsupported condition: ${JSON.stringify(condition)}`);
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
 // DSL:
 // ---------------------------------------------------------------------------------------------------------------------
@@ -143,11 +126,6 @@ export function typeofCondition(condition: CalloutSettingsCondition): CalloutSet
  * The theme/color-scheme context passed to condition checks.
  */
 export type CalloutEnvironment = { theme: string; colorScheme: 'dark' | 'light' };
-
-/**
- * A type of {@link CalloutSettingsCondition callout setting condition}.
- */
-export type CalloutSettingsConditionType = 'theme' | 'colorScheme' | 'and' | 'or';
 
 /** A condition that checks the current Obsidian theme. */
 export type CalloutSettingsThemeCondition = { theme: ThemeID | '<default>' };

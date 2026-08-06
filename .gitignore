@@ -34,3 +34,5 @@ devenv.local.yaml
 graphify-out/[0-9]*/
 
 temp/
+.fallow/
+.claude/

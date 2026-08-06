@@ -17,7 +17,7 @@ describe('assembleStylesheet', () => {
 	test('user setting for a callout appears in output', () => {
 		const css = assembleStylesheet({ 'my-callout': [{ changes: { color: '0, 128, 255' } }] }, {}, env);
 		expect(css).toContain('[data-callout="my-callout"]');
-		expect(css).toContain('--callout-color: 0, 128, 255');
+		expect(css).toContain('--callout-color: rgb(0, 128, 255)');
 	});
 
 	test('alias inherits canonical settings', () => {
@@ -29,7 +29,7 @@ describe('assembleStylesheet', () => {
 		expect(css).toContain('[data-callout="alias-a"]');
 		expect(css).toContain('[data-callout="alias-b"]');
 		const aliasRules = css.match(/\[data-callout="alias-a"\][^}]*}/s)?.[0] ?? '';
-		expect(aliasRules).toContain('--callout-color: 100, 200, 50');
+		expect(aliasRules).toContain('--callout-color: rgb(100, 200, 50)');
 	});
 
 	test('alias own setting wins over propagated canonical setting in CSS cascade', () => {
@@ -113,6 +113,24 @@ describe('assembleStylesheet — iconColorAdjust', () => {
 		});
 		expect(css).toContain('calc(s + -30)');
 		expect(css).toContain('calc(l + -10)');
+	});
+
+	test('offsets past the UI\'s slider bounds are clamped, not passed through raw', () => {
+		const css = assembleStylesheet({}, {}, env, {
+			light: { saturation: 0, lightness: 0 },
+			dark: { saturation: 1000, lightness: 500 },
+		});
+		expect(css).toContain('calc(s + 100)');
+		expect(css).toContain('calc(l + 50)');
+	});
+
+	test('negative offsets past the UI\'s slider bounds are clamped symmetrically', () => {
+		const css = assembleStylesheet({}, {}, env, {
+			light: { saturation: 0, lightness: 0 },
+			dark: { saturation: -1000, lightness: -500 },
+		});
+		expect(css).toContain('calc(s + -100)');
+		expect(css).toContain('calc(l + -50)');
 	});
 
 	test('offsets stay unitless — % silently breaks Chromium\'s relative-color calc()', () => {
