@@ -1,50 +1,113 @@
 # Callout Manager (lhak fork)
 
-## Gotchas
-- `registerMarkdownPostProcessor` runs on detached elements — `getComputedStyle` CSS custom properties are empty there (no cascade context). For anything that must read a CSS var after insertion (e.g. `--callout-icon` → `setIcon`), use a `MutationObserver` on `document.body` with `{ childList: true, subtree: true }` instead; it fires after elements are live in the DOM.
-- `--callout-color` cascades passively (works even in Settings renderers like the community plugin page), but `--callout-icon` requires an active `setIcon()` call timed to DOM insertion — if color is correct but icon is missing, the injection fired before or without DOM attachment.
-- `manifest.json`/`versions.json` are build artifacts — `build/esbuild-plugin-obsidian/esbuild-plugin-obsidian.mjs` regenerates both from `package.json`'s `obsidianPlugin` field on every `bun run build:plugin`/`bun run deploy`. Edit `package.json`, not those files directly; hand edits get silently overwritten on the next build. (Corrects earlier guidance here that said to edit `manifest.json` by hand — that predates the current build script.)
-- `getComputedStyle().getPropertyValue('--custom-property')` returns the raw token string in Chromium (e.g. `var(--color-yellow)`), not the resolved value — propagating resolver-read values to aliases bakes in a static concrete colour that diverges from the live document.
-- When debugging colour/alias bugs, read the vault data.json first (`~/.../lhakZettel/.obsidian/plugins/callout-manager/data.json`) — many "built-in" callouts have explicit colour/icon settings stored there that affect alias propagation.
-- CSS relative-color syntax (`hsl(from <color> h s l)`) in this Obsidian's Chromium build breaks when a `%` unit is added inside a channel `calc()` — `calc(s + 30%)` silently resolves to a wrong, unrelated color; `calc(s + 30)` (unitless) works correctly. Confirmed via live `obsidian eval`, not documented anywhere — re-check with eval before trusting `%` in a relative-color calc here.
-- `--callout-color` is not guaranteed to be an `R, G, B` triplet — per-callout overrides in data.json can be a full CSS color (e.g. `#4caeaa`). Don't wrap it in `rgb(var(--callout-color))`; pass it directly to functions expecting a `<color>` (e.g. `hsl(from var(--callout-color) ...)`).
-- Obsidian's own CSS sets the icon color via `.callout-icon .svg-icon { color: var(--callout-color) }` (two-class specificity) — any override must match `.callout-icon .svg-icon` exactly; a bare `.callout-icon { color: ... }` rule loses regardless of stylesheet load order since specificity beats source order.
-- When porting upstream fixes that touch `--callout-color` formatting: this fork's `changes.color` can already be a full CSS value (hex/`var()`), not upstream's bare-triplet convention — blindly wrapping it in `rgb(...)` produces invalid CSS (`rgb(#3079b0)`) and silently kills every callout's color. `calloutSettingsToStyles`'s `toCssColor()` guards this now; don't reintroduce an unconditional `rgb()` wrap.
+Fork of `eth-p/obsidian-callout-manager`. Not published to npm or the community store —
+install/dev docs should describe manual copy or BRAT, not upstream's install flow.
+
+House conventions for Obsidian plugin repos live in the `obsidian-plugin-dev` skill —
+including upstream-sync procedure, settings-tab structure, CSS specificity, and live
+debugging. Only repo-specific facts are below.
+
+Has `graphify-out/`.
+
+## Upstream
+
+No remote configured by default; add temporarily with `git remote add upstream <url>`.
+
+Reviewed through `bfdf696` (tag `1.1.2`, 2026-08-07). Cherry-picked its 3 real fixes by
+hand: Obsidian 1.13's `--callout-color` needing a full `rgb(...)`/CSS color rather than a
+bare triplet (`callout-util.ts`, `callout-settings.ts`, `callout-preview.ts`,
+`changelog.ts`), and deprecated `MarkdownRenderer.renderMarkdown` → `.render(app, …)`
+(`changelog.ts`, `changelog-pane.ts`). Skipped its `versions.json`-generation fix (already
+correct here) and its version bump (this fork versions independently).
+
+Next review: `bfdf696..upstream/master`.
+
+## Build artifacts
+
+`manifest.json` and `versions.json` are **generated** —
+`build/esbuild-plugin-obsidian/esbuild-plugin-obsidian.mjs` regenerates both from
+`package.json`'s `obsidianPlugin` field on every `bun run build:plugin` / `bun run deploy`.
+Edit `package.json`; hand edits to those two files are silently overwritten.
+
+## Callout color model
+
+- `--callout-color` is **not** guaranteed to be an `R, G, B` triplet — per-callout
+  overrides in `data.json` can hold a full CSS color (`#4caeaa`). Never wrap it in
+  `rgb(var(--callout-color))`; pass it directly to functions taking a `<color>`.
+  `calloutSettingsToStyles`'s `toCssColor()` guards this — do not reintroduce an
+  unconditional `rgb()` wrap when porting upstream.
+- `--callout-color` cascades passively (it works even in Settings renderers), but
+  `--callout-icon` requires an active `setIcon()` call timed to DOM insertion. Correct
+  color with a missing icon means the injection fired before or without DOM attachment.
+- When debugging color/alias bugs, read the vault's `data.json` first — many "built-in"
+  callouts carry explicit color/icon settings there that affect alias propagation.
 
 ## Architecture
-- This fork is not published to npm or the Obsidian community plugin store (no publish scripts in package.json) — install/dev docs should describe manual copy or BRAT, not upstream's install flow.
-- Upstream is `eth-p/obsidian-callout-manager` (no remote configured by default — add temporarily with `git remote add upstream <url>` when checking). Reviewed upstream through commit `bfdf696` (tag `1.1.2`, 2026-08-07): cherry-picked its 3 real fixes by hand (Obsidian 1.13 `--callout-color` now needs full `rgb(...)`/CSS-color not bare triplet, in `callout-util.ts`/`callout-settings.ts`/`callout-preview.ts`/`changelog.ts`; deprecated `MarkdownRenderer.renderMarkdown` → `.render(app, ...)` in `changelog.ts`/`changelog-pane.ts`). Skipped upstream's `versions.json`-generation fix (already independently correct here) and its version-bump commit (fork has its own versioning, not published). GitHub's "N commits behind" count won't reflect this — cherry-picks are new SHAs, not the same commits; ignore that indicator or do a real `git merge` if it matters. Next review: diff `bfdf696..upstream/master`, not full history.
-- Panes take `CalloutStore` (`src/callout-store.ts`), not `CalloutManagerPlugin` — the interface is the seam. `CalloutStore` is the full write surface (`extends CalloutReader, AliasStore, IconColorAdjustStore` + CRUD) — only `ManageCalloutsPane` needs it. Read-only or single-concern consumers (`InsertCalloutModal`, `apis.ts`, `api-v1.ts`) should depend on `CalloutReader`/`AliasStore`/`IconColorAdjustStore` directly rather than widening back to `CalloutStore` out of habit — `CalloutRepository` is still the sole implementation of all of them.
-- `CalloutRepository` (`src/callout-repository.ts`) is the concrete `CalloutStore`; `main.ts` holds it as `this.repository` and hands it to panes, commands, and the API layer.
-- `applyStyles` is a closure inside `onload`, not a class method — it closes over the live `settings` object so the `onSave` mutation callback and the `css-change` reapply handler share the same function. Do not extract it to a method.
-- Grouped `Setting` rows must be wrapped in `containerEl.createDiv('setting-group').createDiv('setting-items')` (pass the inner div to `new Setting(...)`) — otherwise Obsidian renders them without native card padding/background. See manage-callouts-pane.ts. A `.setHeading()` row inside such a group gets **zero** padding and the same font-size/weight as normal rows by default (unlike normal rows' 20px `--size-4-5` padding) — match padding and bump `.setting-item-name` font explicitly, or it looks broken/unstyled.
-- `determineAppearanceType` (`src/callout-appearance.ts`) splits a callout's settings into `unified` (single color/icon only) or `complex` (conditional, duplicate-key, or any changes key beyond color/icon, e.g. `customStyles`). Any UI that edits color/icon inline must check for `complex` first and refuse/warn instead of overwriting — see the guard in `manage-callouts-pane.ts` (`isComplex`).
-- To check if a pane/class is reachable, grep for its name across `api-v1.ts`, `apis.ts`, `api-common.ts`, `main.ts`, and the other pane files — these are the only roots. Zero hits across all of them means it's orphaned.
-- `UIPane` (`src/ui/pane.ts`) hosts a single pane at a time — no stack, no `nav`/back-button, no suspend/restore (removed; see ADR-0001, now Superseded). `ManageCalloutsPane`/`ChangelogPane` are the only subclasses.
-- `CalloutManagerAPIs` (`src/apis.ts`) is the sole effective API-version validator — `main.ts`'s `newApiHandle`/`destroyApiHandle` are thin pass-throughs to it, not independent checks. `api/index.ts`'s `getApi()` types `version` as bare `string` (crosses a real plugin-to-plugin boundary), so this check guards external input, not just internal consistency — don't remove it when refactoring, even though only one version (`v1`) has ever existed.
-- Every `Callout` is user-created through this plugin — there is no built-in/theme/snippet discovery. That was deliberately removed in `acea84d` ("Overhaul manage pane with inline editing"), not a regression; `CalloutCollection` has no source-tracking concept and `Callout` has no `sources` field. Don't reintroduce either without confirming the user wants discovery back — it was checked and declined once already. See ADR-0003.
 
-## Testing
-- Use `bun run test` (jest) or `bun test` (bun runner) — always run both, they use separate mocks and can drift.
-- Babel's `@babel/preset-typescript` silently fails to strip type args on `new Map<T,U>()`/`new Set<T>()` used as a class-field initializer (e.g. `private data = new Map<K,V>()`) — Jest throws `SyntaxError: Unexpected token ','` at a **wrong line number** the first time any test imports that file. Fix: annotate the field type instead (`private data: Map<K,V> = new Map();`), never put type args on the `new` call itself. First hit in `callout-collection.ts` — the whole file had never been transformed by Jest before, since no test imported it until this session.
-- A module's top-level import of bindings used **only** in type position (e.g. `import { CalloutID } from '../api'` where `CalloutID` never appears as a value) must be `import type` — otherwise Babel throws `Cannot transform the imported binding X since it's also used in a type annotation` the first time any test imports that module. Check this whenever writing the first test for a previously-untested file.
-- Two independent obsidian mocks exist: `__mocks__/obsidian.ts` (Jest's auto-mock, minimal) and `test-preload.ts`'s `mock.module()` (bun, richer). `obsidian` package is type stubs only (`"main": ""`), so bun's ESM resolver fails if any loaded module imports it at runtime without the preload mock. If a new test chain reaches an unmocked `obsidian` symbol, add it to **both** `__mocks__/obsidian.ts` and `test-preload.ts`.
-- No DOM exists in either test runner (no jsdom/happy-dom, no jest `testEnvironment`, no `document`/`activeDocument` globals) — code using `activeDocument`/DOM APIs, or Obsidian's DOM prototype extensions (`createDiv`/`createEl`/`instanceOf`), can't be unit-tested without first standing up jsdom plus a hand-written polyfill for those extensions. Not done yet anywhere in this repo.
-- A module with a top-level `.md` import (e.g. `import X from '../CHANGELOG.md'`, esbuild's `.md: text` loader) can't be loaded by either test runner — no `.md` transform exists outside the production build. Extract testable logic into a separate module without that import.
-- The reachability check below also misses orphaned test doubles (e.g. a class doc-commented "for use in tests" that no test actually imports) — also grep `src/**/*.test.ts` before assuming something's live.
+- Panes take `CalloutStore` (`src/callout-store.ts`), not `CalloutManagerPlugin` — the
+  interface is the seam. `CalloutStore` is the full write surface (`CalloutReader` +
+  `AliasStore` + `IconColorAdjustStore` + CRUD) and only `ManageCalloutsPane` needs all of
+  it. Read-only consumers (`InsertCalloutModal`, `apis.ts`, `api-v1.ts`) should depend on
+  the narrow interfaces directly. `CalloutRepository` (`src/callout-repository.ts`) is the
+  sole implementation; `main.ts` holds it as `this.repository`.
+- `applyStyles` is a closure inside `onload`, not a class method — it closes over the live
+  `settings` object so the `onSave` callback and the `css-change` handler share one
+  function. Do not extract it.
+- `determineAppearanceType` (`src/callout-appearance.ts`) splits settings into `unified`
+  (single color/icon) or `complex` (conditional, duplicate-key, or any changes key beyond
+  color/icon). Any UI editing color/icon inline must check `complex` first and refuse —
+  see `isComplex` in `manage-callouts-pane.ts`.
+- `UIPane` (`src/ui/pane.ts`) hosts one pane at a time — no stack, nav, or suspend/restore
+  (removed; ADR-0001, Superseded). `ManageCalloutsPane` and `ChangelogPane` are the only
+  subclasses.
+- `CalloutManagerAPIs` (`src/apis.ts`) is the sole effective API-version validator;
+  `main.ts`'s `newApiHandle`/`destroyApiHandle` are pass-throughs. `api/index.ts`'s
+  `getApi()` types `version` as bare `string` and crosses a real plugin-to-plugin
+  boundary, so this guards external input — keep it even though only `v1` exists.
+- Every `Callout` is user-created; there is no built-in/theme/snippet discovery. That was
+  removed deliberately in `acea84d`, not lost — `CalloutCollection` has no source-tracking
+  and `Callout` has no `sources` field. See ADR-0003; reintroducing discovery was proposed
+  and declined once already.
+- Reachability check: grep a name across `api-v1.ts`, `apis.ts`, `api-common.ts`,
+  `main.ts`, the other pane files, **and** `src/**/*.test.ts` — those are the only roots,
+  and the test grep catches orphaned test doubles.
 
-## Manual testing via obsidian-cli / CDP (this vault)
-- `editorCallback`-based commands (e.g. `callout-manager:insert-callout`) silently no-op via `app.commands.executeCommandById(...)` unless a real `MarkdownView` is active — open a note first.
-- Even with an active editor, `executeCommandById` sometimes returns `true` but the modal it should have opened isn't present by the next `obsidian eval` call (timing/focus artifact across separate CDP round-trips). Direct invocation is reliable where the command dispatcher isn't:
-  ```js
-  const cmd = app.commands.commands['callout-manager:insert-callout'];
-  cmd.editorCallback(app.workspace.activeEditor.editor, app.workspace.getActiveViewOfType(...));
-  ```
-- `document.querySelectorAll('.modal-container').forEach(m => m.remove())` before reopening a modal avoids stray leftover modals stacking across test iterations.
-- `obsidian eval` calls against `repository`/`plugin` write straight to the real vault's `data.json` — there is no sandbox. Before mutating state to test something (e.g. `setCalloutSettings`), read the current value first and restore it afterward, or you'll silently overwrite real saved settings (happened once with the `abstract` callout's color/icon).
-- To test the Plugin API end-to-end: `app.plugins.plugins['callout-manager'].newApiHandle('v1', undefined, () => {})` returns a handle exactly like a real consumer plugin would get from `getApi()` — use it to call `getCallouts()`/`getColor()`/`on('change', ...)` live rather than trusting the typecheck alone.
-- Switching Obsidian's actual light/dark theme via eval needs **both** `app.vault.setConfig('theme', 'obsidian'|'moonstone'|'system')` and `app.setTheme(...)` — toggling `document.body.classList` alone doesn't restyle the chrome. Restore to `'system'` afterward.
-- `dev:screenshot`'s printed output path has literal space characters inside the timestamp (locale-formatted number, not shell-escaping) — `cp`/`mv` with the path as typed fails. Use `find <tmpdir> -maxdepth 1 -iname "*screenshot*" -exec cp {} <dest> \;` instead.
-- To crop one element out of a full-window `dev:screenshot`: get `el.getBoundingClientRect()` + `window.innerWidth/innerHeight` via eval, then `scale = <actual saved PNG width> / innerWidth` (measure the real file, don't trust `window.devicePixelRatio` blindly) before cropping with PIL.
-- `obsidian eval` takes the code as a named param: `obsidian eval code="..."`, not a bare string argument.
-- To find a live rendered `.callout` element for eval-based testing (e.g. checking computed style), don't assume the active file has one — check open leaves: `app.workspace.getLeavesOfType('markdown').find(l => l.view.containerEl.querySelector('.callout'))`. Check the active color scheme the same way: `document.body.classList.contains('theme-dark')` — scheme-gated settings (e.g. `iconColorAdjust`) silently no-op if you mutate the wrong scheme.
+## Testing (Jest + bun, both)
+
+Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, they drift.
+
+- Babel's `@babel/preset-typescript` silently fails to strip type args on
+  `new Map<T,U>()` / `new Set<T>()` used as a **class-field initializer**, throwing
+  `SyntaxError: Unexpected token ','` at a wrong line number. Annotate the field instead:
+  `private data: Map<K,V> = new Map();`.
+- A top-level import used only in type position must be `import type`, or Babel throws
+  `Cannot transform the imported binding X`. Check this when writing the first test for a
+  previously-untested file.
+- Two obsidian mocks exist: `__mocks__/obsidian.ts` (Jest) and `test-preload.ts`'s
+  `mock.module()` (bun, richer). Add new symbols to **both**.
+- Neither runner has a DOM. Code using `activeDocument` or Obsidian's DOM prototype
+  extensions (`createDiv`, `createEl`, `instanceOf`) is not unit-testable without standing
+  up jsdom plus polyfills — not done anywhere here.
+- A module with a top-level `.md` import (esbuild's `.md: text` loader) cannot load in
+  either runner. Extract testable logic out of it.
+
+## Live testing
+
+- `registerMarkdownPostProcessor` runs on detached elements, where `getComputedStyle` CSS
+  custom properties are empty. Use a `MutationObserver` on `document.body` with
+  `{ childList: true, subtree: true }` for anything that must read a var after insertion.
+- CSS relative-color syntax in this Chromium build breaks when a `%` unit appears inside a
+  channel `calc()`: `calc(s + 30%)` silently resolves wrong; `calc(s + 30)` works.
+  Re-check with `eval` before trusting `%` here.
+- `editorCallback` commands (`callout-manager:insert-callout`) need an active
+  `MarkdownView`, and `executeCommandById` can return `true` with no modal present. Invoke
+  directly:
+  `app.commands.commands['callout-manager:insert-callout'].editorCallback(editor, view)`.
+- API end-to-end:
+  `app.plugins.plugins['callout-manager'].newApiHandle('v1', undefined, () => {})` returns
+  the same handle a consumer plugin gets from `getApi()`.
+- To find a live `.callout` element, check open leaves rather than assuming the active
+  file has one:
+  `app.workspace.getLeavesOfType('markdown').find(l => l.view.containerEl.querySelector('.callout'))`.
+  Scheme-gated settings (e.g. `iconColorAdjust`) silently no-op against the wrong scheme —
+  check `document.body.classList.contains('theme-dark')`.

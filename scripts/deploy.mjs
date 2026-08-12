@@ -1,18 +1,36 @@
-import { copyFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+// Copies build output into the vault's plugin folder.
+// Override the plugins directory with OBSIDIAN_VAULT_DIR.
+//
+// manifest.json is a build artifact here — the esbuild plugin regenerates it from
+// package.json's `obsidianPlugin` field on every build.
+import { access, copyFile, mkdir } from 'fs/promises';
+import { basename, join } from 'path';
 
-const VAULT_PLUGIN_DIR =
-	process.env.OBSIDIAN_VAULT_PLUGIN_DIR ??
-	'/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins/callout-manager';
+const VAULT_DIR =
+	process.env.OBSIDIAN_VAULT_DIR ??
+	'/Users/lhak/Library/Mobile Documents/iCloud~md~obsidian/Documents/lhakZettel/.obsidian/plugins';
 
-const FILES = ['manifest.json', join('dist', 'main.js'), join('dist', 'styles.css')];
+// Vault folder name — not the manifest id.
+const PLUGIN_DIR_NAME = 'callout-manager';
 
-await mkdir(VAULT_PLUGIN_DIR, { recursive: true });
+const REQUIRED = ['manifest.json', join('dist', 'main.js')];
+const OPTIONAL = [join('dist', 'styles.css')];
 
-for (const src of FILES) {
-	const dest = join(VAULT_PLUGIN_DIR, src.split('/').at(-1));
-	await copyFile(src, dest);
-	console.log(`Copied ${src} → ${dest}`);
+const targets = [join(VAULT_DIR, PLUGIN_DIR_NAME)];
+
+const exists = (path) => access(path).then(() => true, () => false);
+
+for (const src of REQUIRED) {
+	if (!(await exists(src))) {
+		throw new Error(`Missing build output: ${src} — run "bun run build:plugin" first.`);
+	}
 }
 
-console.log('Deploy complete.');
+for (const target of targets) {
+	await mkdir(target, { recursive: true });
+	for (const src of [...REQUIRED, ...OPTIONAL]) {
+		if (!(await exists(src))) continue;
+		await copyFile(src, join(target, basename(src)));
+	}
+	console.log(`Deployed to ${target}`);
+}
