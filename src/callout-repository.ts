@@ -5,6 +5,7 @@ import { CalloutCollection } from './callout-collection';
 import { CalloutSettings } from './callout-settings';
 import { CalloutStore, IconColorAdjust } from './callout-store';
 import Settings from './settings';
+import { assertValidCalloutId } from './util/callout-id';
 
 export class CalloutRepository implements CalloutStore {
 	public readonly app: App;
@@ -86,6 +87,8 @@ export class CalloutRepository implements CalloutStore {
 	}
 
 	public createCustomCallout(id: CalloutID): void {
+		assertValidCalloutId(id);
+
 		this.callouts.add(id);
 		this.settings.callouts.custom = this.callouts.keys();
 		this.onSave(this.settings);
@@ -93,6 +96,8 @@ export class CalloutRepository implements CalloutStore {
 	}
 
 	public renameCustomCallout(oldId: CalloutID, newId: CalloutID): void {
+		assertValidCalloutId(newId);
+
 		if (!this.callouts.has(oldId)) throw new Error(`Callout '${oldId}' does not exist.`);
 		if (this.callouts.has(newId)) throw new Error(`Callout '${newId}' already exists.`);
 

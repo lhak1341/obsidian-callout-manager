@@ -1,4 +1,4 @@
-import { Plugin, setIcon } from 'obsidian';
+import { Plugin } from 'obsidian';
 import { CustomStyleSheet, createCustomStyleSheet } from 'obsidian-extra';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
@@ -10,7 +10,8 @@ import { CalloutRepository } from './callout-repository';
 import { CalloutResolver } from './callout-resolver';
 import { currentCalloutEnvironment } from './callout-settings';
 import { assembleStylesheet } from './assemble-stylesheet';
-import { registerLucideIcons, resolveLucideIconId } from './lucide-icons';
+import { IconReinjector } from './icon-reinjection';
+import { registerLucideIcons } from './lucide-icons';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import Settings, { defaultSettings, migrateSettings } from './settings';
@@ -85,51 +86,11 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on('css-change', reapplyDebounced));
 		this.registerEvent(this.app.workspace.on('layout-change', reapplyDebounced));
 
-		// Re-inject icons for callouts where Obsidian skipped icon injection.
-		//
-		// Obsidian's callout post-processor runs on elements while they are still detached
-		// from the DOM, so getComputedStyle returns empty values and icon injection silently
-		// no-ops. This affects contexts like the community plugin info page. A MutationObserver
-		// fires after insertion, at which point the CSS cascade is live and the correct
-		// --callout-icon value is available.
-		const injectMissingCalloutIcons = (root: HTMLElement) => {
-			const callouts: HTMLElement[] = root.classList.contains('callout') ? [root] : [];
-			callouts.push(...root.querySelectorAll<HTMLElement>('.callout'));
-			for (const callout of callouts) {
-				const iconEl = callout.querySelector<HTMLElement>('.callout-icon');
-				if (!iconEl || iconEl.childElementCount > 0) continue;
-				const icon = getComputedStyle(callout).getPropertyValue('--callout-icon').trim();
-				if (icon) setIcon(iconEl, resolveLucideIconId(icon));
-			}
-		};
-		// Popout note windows are separate `Window`/`Document` instances — a
-		// MutationObserver on the main document never sees mutations there, so
-		// each window (main + every popout) gets its own observer.
-		const iconObserversByWindow = new Map<Window, MutationObserver>();
-		const attachIconObserver = (win: Window) => {
-			const observer = new MutationObserver((mutations) => {
-				for (const mutation of mutations) {
-					for (const node of mutation.addedNodes) {
-						if (node.instanceOf(HTMLElement)) injectMissingCalloutIcons(node);
-					}
-				}
-			});
-			observer.observe(win.document.body, { childList: true, subtree: true });
-			iconObserversByWindow.set(win, observer);
-		};
-
-		attachIconObserver(window);
-		this.register(() => {
-			for (const observer of iconObserversByWindow.values()) observer.disconnect();
-		});
-
-		this.registerEvent(this.app.workspace.on('window-open', (_, win) => attachIconObserver(win)));
-		this.registerEvent(
-			this.app.workspace.on('window-close', (_, win) => {
-				iconObserversByWindow.get(win)?.disconnect();
-				iconObserversByWindow.delete(win);
-			}),
-		);
+		// Re-inject icons for callouts where Obsidian skipped icon injection (see IconReinjector).
+		const iconReinjector = new IconReinjector();
+		this.register(() => iconReinjector.unload());
+		this.registerEvent(this.app.workspace.on('window-open', (_, win) => iconReinjector.attach(win)));
+		this.registerEvent(this.app.workspace.on('window-close', (_, win) => iconReinjector.detach(win)));
 
 		// Register setting tab.
 		this.settingTab = new UISettingTab(this, () => new ManageCalloutsPane(this.repository));

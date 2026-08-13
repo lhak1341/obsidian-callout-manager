@@ -6,7 +6,7 @@ import { resolveColorToRgb } from '&color';
 import { determineAppearanceType, unifiedAppearanceToSettings } from '../../callout-appearance';
 import { AliasStore, CalloutReader, CalloutStore } from '../../callout-store';
 import { defaultColors } from '../../default_colors.json';
-import { resolveLucideIconId } from '../../lucide-icons';
+import { iconIdForRender } from '../../lucide-icons';
 import { slugifyCalloutId } from '../../util/callout-id';
 import { IconSuggest } from './icon-suggest';
 
@@ -48,7 +48,7 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 			new Setting(containerEl).then((setting) => {
 				// === Left side: icon (colored to match the callout) + title ===
 				const iconEl = setting.nameEl.createSpan({ cls: 'calloutmanager-row-icon' });
-				setIcon(iconEl, resolveLucideIconId(callout.icon || 'lucide-pencil'));
+				setIcon(iconEl, iconIdForRender(callout.icon));
 
 				const setIconColor = (colorValue: string) => {
 					const raw = colorValue || callout.color;
@@ -164,7 +164,7 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 
 					const refreshIconEl = (iconName: string) => {
 						iconEl.empty();
-						setIcon(iconEl, resolveLucideIconId(iconName || callout.icon || 'lucide-pencil'));
+						setIcon(iconEl, iconIdForRender(iconName || callout.icon));
 						setIconColor(currentColor);
 					};
 

@@ -1,10 +1,11 @@
 import { ButtonComponent, Setting, SliderComponent, TextComponent, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
-import { getTitleFromCallout } from '&callout-util';
 import { CalloutStore } from '../callout-store';
 import { UIPane } from '&ui/pane';
 
+import { filterAndSortCallouts } from '../callout-search';
+import { DEFAULT_ICON_ID } from '../lucide-icons';
 import { isValidCalloutId, slugifyCalloutId } from '../util/callout-id';
 import { makeCalloutRow } from '&ui/component/callout-row';
 
@@ -32,30 +33,16 @@ export class ManageCalloutsPane extends UIPane {
 	}
 
 	private refresh(): void {
-		this.allCallouts = [...this.plugin.getCallouts()].sort((a, b) => a.id.localeCompare(b.id));
+		this.allCallouts = this.plugin.getCallouts();
 		this.applyFilter();
 		this.display();
 	}
 
 	private applyFilter(): void {
-		const q = this.searchQuery.toLowerCase().trim();
-		const aliasGroups = this.plugin.getAliasGroups();
-		const list = q
-			? this.allCallouts.filter(
-					(c) =>
-						c.id.toLowerCase().includes(q) ||
-						getTitleFromCallout(c).toLowerCase().includes(q) ||
-						(aliasGroups[c.id] ?? []).some((a) => a.toLowerCase().includes(q)),
-				)
-			: [...this.allCallouts];
-
-		if (this.sortMode === 'color') {
-			list.sort((a, b) => (a.color ?? '').localeCompare(b.color ?? '') || a.id.localeCompare(b.id));
-		} else if (this.sortMode === 'icon') {
-			list.sort((a, b) => (a.icon ?? '').localeCompare(b.icon ?? '') || a.id.localeCompare(b.id));
-		}
-
-		this.filteredCallouts = list;
+		this.filteredCallouts = filterAndSortCallouts(this.allCallouts, this.searchQuery, {
+			aliasGroups: this.plugin.getAliasGroups(),
+			sortMode: this.sortMode,
+		});
 	}
 
 	/** @override */
@@ -159,7 +146,7 @@ export class ManageCalloutsPane extends UIPane {
 			setting.settingEl.classList.add('calloutmanager-create-row');
 
 			const iconEl = setting.nameEl.createSpan({ cls: 'calloutmanager-row-icon' });
-			setIcon(iconEl, 'lucide-pencil');
+			setIcon(iconEl, DEFAULT_ICON_ID);
 
 			const nameInput = setting.nameEl.createEl('input', {
 				cls: 'calloutmanager-row-name-input',

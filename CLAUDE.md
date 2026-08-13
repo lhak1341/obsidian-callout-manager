@@ -53,9 +53,15 @@ Edit `package.json`; hand edits to those two files are silently overwritten.
 `lucide-` — Obsidian's `getIcon()`/`setIcon()` silently fail to resolve `addIcon()`-registered
 entries under the native `lucide-` prefix. Storage in this repo carries icon ids both bare
 (`"flame"`) and `lucide-`-prefixed (`"lucide-flame"`); `resolveLucideIconId()` normalizes
-either form before every dynamic `setIcon()`/`getIcon()` call site. `manage-callouts-pane.ts`'s
-`setIcon(iconEl, 'lucide-pencil')` placeholder is a static literal and intentionally left
-unwrapped.
+either form before every dynamic `setIcon()`/`getIcon()` call site. The "no icon set yet" placeholder
+is `DEFAULT_ICON_ID` (`'lucide-pencil'`) — a single exported constant, not a literal re-typed at each
+call site. `iconIdForRender(id)` combines the `DEFAULT_ICON_ID` fallback with `resolveLucideIconId()`
+for call sites that `setIcon()`/`getIcon()` directly. Don't use `iconIdForRender()` for an id headed
+into `CalloutPreviewComponent` — it already resolves internally, and `CalloutResolver`'s hidden probe
+relies on being able to pass an empty icon through *unresolved*; use the bare `DEFAULT_ICON_ID`
+constant there instead (fallback only, no resolve). Sites that must NOT get a placeholder at all — `icon-reinjection.ts`'s `IconReinjector` (a callout
+genuinely having no icon is valid and must render none) and `icon-suggest.ts` (candidates are never
+empty) — call `resolveLucideIconId()` directly and stay outside this pattern.
 
 The same sync script also writes `src/lucide-icon-tags.json` (lucide-static's per-icon search
 synonyms, e.g. "flask-conical" -> ["lab", "chemistry", ...] — the data lucide.dev's own icon
@@ -88,6 +94,8 @@ deliberately — it's tested under both Jest and `bun test` (see Testing section
   `main.ts`'s `newApiHandle`/`destroyApiHandle` are pass-throughs. `api/index.ts`'s
   `getApi()` types `version` as bare `string` and crosses a real plugin-to-plugin
   boundary, so this guards external input — keep it even though only `v1` exists.
+- `CalloutRepository.createCustomCallout` has no duplicate-id guard (creating over an existing
+  id is silently idempotent) — unlike `renameCustomCallout`, which throws. Don't assume symmetry.
 - Every `Callout` is user-created; there is no built-in/theme/snippet discovery. That was
   removed deliberately in `acea84d`, not lost — `CalloutCollection` has no source-tracking
   and `Callout` has no `sources` field. See ADR-0003; reintroducing discovery was proposed
@@ -114,6 +122,9 @@ Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, th
   up jsdom plus polyfills — not done anywhere here.
 - A module with a top-level `.md` import (esbuild's `.md: text` loader) cannot load in
   either runner. Extract testable logic out of it.
+- A class that only stores `App`/callbacks (never calls into them) needs no real mock: cast
+  `{} as App`, pass `jest.fn()` spies for constructor callbacks, and build real settings via
+  `defaultSettings()` — see `callout-repository.test.ts`/`api-v1.test.ts`/`callout-collection.test.ts`.
 
 ## Live testing
 

@@ -110,3 +110,17 @@ export function resolveLucideIconId(storedId: string): string {
 	if (gapNames.has(bareName)) return GAP_ICON_PREFIX + bareName;
 	return storedId;
 }
+
+/** Placeholder icon shown wherever a callout has no icon set yet (e.g. a still-unconfigured row). */
+export const DEFAULT_ICON_ID = 'lucide-pencil';
+
+/**
+ * `resolveLucideIconId`, but falls back to {@link DEFAULT_ICON_ID} first if `id` is empty/undefined.
+ * For call sites that render an icon straight to the DOM via `setIcon()`/`getIcon()`. Don't use this
+ * to pre-resolve an id headed into `CalloutPreviewComponent` — it already resolves internally, and
+ * some callers (e.g. `CalloutResolver`'s hidden probe) rely on being able to pass an empty icon
+ * through unresolved. Use the bare {@link DEFAULT_ICON_ID} constant for those instead.
+ */
+export function iconIdForRender(id: string | undefined): string {
+	return resolveLucideIconId(id || DEFAULT_ICON_ID);
+}

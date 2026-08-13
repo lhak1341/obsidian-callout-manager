@@ -3,8 +3,9 @@ import { MarkdownView, Modal, setIcon } from 'obsidian';
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
 import { resolveColorToRgb } from '&color';
+import { filterAndSortCallouts } from '../callout-search';
 import { CalloutReader } from '../callout-store';
-import { resolveLucideIconId } from '../lucide-icons';
+import { DEFAULT_ICON_ID, iconIdForRender } from '../lucide-icons';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
 
 export class InsertCalloutModal extends Modal {
@@ -23,10 +24,10 @@ export class InsertCalloutModal extends Modal {
 	public constructor(plugin: CalloutReader) {
 		super(plugin.app);
 		this.plugin = plugin;
-		this.allCallouts = [...plugin.getCallouts()].sort((a, b) => a.id.localeCompare(b.id));
-		this.filteredCallouts = [...this.allCallouts];
-		if (this.allCallouts.length > 0) {
-			this.selectedCallout = this.allCallouts[0];
+		this.allCallouts = plugin.getCallouts();
+		this.filteredCallouts = filterAndSortCallouts(this.allCallouts, '');
+		if (this.filteredCallouts.length > 0) {
+			this.selectedCallout = this.filteredCallouts[0];
 		}
 
 		// Pre-fill content from editor selection.
@@ -182,14 +183,7 @@ export class InsertCalloutModal extends Modal {
 	}
 
 	private applyFilter(): void {
-		const q = this.searchQuery.toLowerCase().trim();
-		if (!q) {
-			this.filteredCallouts = [...this.allCallouts];
-			return;
-		}
-		this.filteredCallouts = this.allCallouts.filter(
-			(c) => c.id.toLowerCase().includes(q) || getTitleFromCallout(c).toLowerCase().includes(q),
-		);
+		this.filteredCallouts = filterAndSortCallouts(this.allCallouts, this.searchQuery);
 	}
 
 	private refreshGrid(): void {
@@ -208,7 +202,7 @@ export class InsertCalloutModal extends Modal {
 			chips.push(chip);
 
 			const iconEl = chip.createSpan({ cls: 'calloutmanager-insert-chip-icon' });
-			setIcon(iconEl, resolveLucideIconId(callout.icon || 'lucide-pencil'));
+			setIcon(iconEl, iconIdForRender(callout.icon));
 			const rgb = resolveColorToRgb(callout.color ?? '', activeDocument);
 			if (rgb) iconEl.style.setProperty('--calloutmanager-insert-icon-color', rgb);
 
@@ -251,7 +245,7 @@ export class InsertCalloutModal extends Modal {
 
 		new CalloutPreviewComponent(previewContainer, {
 			id: selectedCallout.id,
-			icon: selectedCallout.icon || 'lucide-pencil',
+			icon: selectedCallout.icon || DEFAULT_ICON_ID,
 			title,
 			content,
 		});
