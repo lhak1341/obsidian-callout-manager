@@ -42,6 +42,30 @@ Edit `package.json`; hand edits to those two files are silently overwritten.
 - When debugging color/alias bugs, read the vault's `data.json` first — many "built-in"
   callouts carry explicit color/icon settings there that affect alias propagation.
 
+## Icon registry
+
+`src/lucide-icons.ts` bundles the full current Lucide icon set offline (from the
+`lucide-static` devDependency, refreshed via `bun run sync:lucide` into
+`src/lucide-icon-svgs.json`) so icons missing from Obsidian's version-pinned native set
+(e.g. `mosque`, `broccoli`) still render, zero network calls — ported from the sister
+`obsidian-icon-shortcodes` plugin. `registerLucideIcons()` (called once in `main.ts`'s
+`onload()`) registers every non-native icon under the `callout-manager-lucide-` prefix, not
+`lucide-` — Obsidian's `getIcon()`/`setIcon()` silently fail to resolve `addIcon()`-registered
+entries under the native `lucide-` prefix. Storage in this repo carries icon ids both bare
+(`"flame"`) and `lucide-`-prefixed (`"lucide-flame"`); `resolveLucideIconId()` normalizes
+either form before every dynamic `setIcon()`/`getIcon()` call site. `manage-callouts-pane.ts`'s
+`setIcon(iconEl, 'lucide-pencil')` placeholder is a static literal and intentionally left
+unwrapped.
+
+The same sync script also writes `src/lucide-icon-tags.json` (lucide-static's per-icon search
+synonyms, e.g. "flask-conical" -> ["lab", "chemistry", ...] — the data lucide.dev's own icon
+search runs on, also ported from icon-shortcodes). `src/ui/component/icon-suggest.ts`'s
+`IconSuggest.getSuggestions()` ranks via `src/icon-search.ts`'s `rankIconSuggestions()`, name
+matches first then tag matches, so typing "chem" surfaces flask-conical/atom/biohazard/etc even
+though none of those names contain "chem". `icon-search.ts` has no `obsidian` import
+deliberately — it's tested under both Jest and `bun test` (see Testing section) and importing
+`obsidian` there would break at least one of the two runners.
+
 ## Architecture
 
 - Panes take `CalloutStore` (`src/callout-store.ts`), not `CalloutManagerPlugin` — the

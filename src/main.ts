@@ -10,6 +10,7 @@ import { CalloutRepository } from './callout-repository';
 import { CalloutResolver } from './callout-resolver';
 import { currentCalloutEnvironment } from './callout-settings';
 import { assembleStylesheet } from './assemble-stylesheet';
+import { registerLucideIcons, resolveLucideIconId } from './lucide-icons';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import Settings, { defaultSettings, migrateSettings } from './settings';
@@ -30,6 +31,10 @@ export default class CalloutManagerPlugin extends Plugin {
 	public async onload() {
 		const settings: Settings = migrateSettings(defaultSettings(), await this.loadData());
 		await this.saveData(settings);
+
+		// Register the full offline Lucide icon set (gap-filled against whatever
+		// subset this Obsidian version bundles natively) before anything renders.
+		registerLucideIcons();
 
 		// Create the callout resolver.
 		// This needs to be created as early as possible to ensure the Obsidian stylesheet within the shadow DOM has loaded.
@@ -94,18 +99,37 @@ export default class CalloutManagerPlugin extends Plugin {
 				const iconEl = callout.querySelector<HTMLElement>('.callout-icon');
 				if (!iconEl || iconEl.childElementCount > 0) continue;
 				const icon = getComputedStyle(callout).getPropertyValue('--callout-icon').trim();
-				if (icon) setIcon(iconEl, icon);
+				if (icon) setIcon(iconEl, resolveLucideIconId(icon));
 			}
 		};
-		const iconObserver = new MutationObserver((mutations) => {
-			for (const mutation of mutations) {
-				for (const node of mutation.addedNodes) {
-					if (node instanceof HTMLElement) injectMissingCalloutIcons(node);
+		// Popout note windows are separate `Window`/`Document` instances — a
+		// MutationObserver on the main document never sees mutations there, so
+		// each window (main + every popout) gets its own observer.
+		const iconObserversByWindow = new Map<Window, MutationObserver>();
+		const attachIconObserver = (win: Window) => {
+			const observer = new MutationObserver((mutations) => {
+				for (const mutation of mutations) {
+					for (const node of mutation.addedNodes) {
+						if (node.instanceOf(HTMLElement)) injectMissingCalloutIcons(node);
+					}
 				}
-			}
+			});
+			observer.observe(win.document.body, { childList: true, subtree: true });
+			iconObserversByWindow.set(win, observer);
+		};
+
+		attachIconObserver(window);
+		this.register(() => {
+			for (const observer of iconObserversByWindow.values()) observer.disconnect();
 		});
-		iconObserver.observe(document.body, { childList: true, subtree: true });
-		this.register(() => iconObserver.disconnect());
+
+		this.registerEvent(this.app.workspace.on('window-open', (_, win) => attachIconObserver(win)));
+		this.registerEvent(
+			this.app.workspace.on('window-close', (_, win) => {
+				iconObserversByWindow.get(win)?.disconnect();
+				iconObserversByWindow.delete(win);
+			}),
+		);
 
 		// Register setting tab.
 		this.settingTab = new UISettingTab(this, () => new ManageCalloutsPane(this.repository));

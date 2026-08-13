@@ -4,6 +4,7 @@ import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
 import { resolveColorToRgb } from '&color';
 import { CalloutReader } from '../callout-store';
+import { resolveLucideIconId } from '../lucide-icons';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
 
 export class InsertCalloutModal extends Modal {
@@ -177,7 +178,7 @@ export class InsertCalloutModal extends Modal {
 			}
 		});
 
-		activeWindow.setTimeout(() => searchEl.focus(), 0);
+		window.setTimeout(() => searchEl.focus(), 0);
 	}
 
 	private applyFilter(): void {
@@ -207,7 +208,7 @@ export class InsertCalloutModal extends Modal {
 			chips.push(chip);
 
 			const iconEl = chip.createSpan({ cls: 'calloutmanager-insert-chip-icon' });
-			setIcon(iconEl, callout.icon || 'lucide-pencil');
+			setIcon(iconEl, resolveLucideIconId(callout.icon || 'lucide-pencil'));
 			const rgb = resolveColorToRgb(callout.color ?? '', activeDocument);
 			if (rgb) iconEl.style.setProperty('--calloutmanager-insert-icon-color', rgb);
 

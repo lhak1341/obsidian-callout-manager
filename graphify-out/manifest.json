@@ -55,19 +55,19 @@
     "semantic_hash": "02412869e7fd33261e8003356d339130"
   },
   "manifest.json": {
-    "mtime": 1786040734.5558398,
+    "mtime": 1786638020.1972113,
     "ast_hash": "401c8ec5d600a52d6018ed39724ea9ac",
     "semantic_hash": "401c8ec5d600a52d6018ed39724ea9ac"
   },
   "package.json": {
-    "mtime": 1786036152.0471094,
-    "ast_hash": "3218b03910a1822bb3b3aacd72720f4c",
-    "semantic_hash": "3218b03910a1822bb3b3aacd72720f4c"
+    "mtime": 1786633126.187933,
+    "ast_hash": "679ba7f982092d9b2deede33995f8c4c",
+    "semantic_hash": ""
   },
   "scripts/deploy.mjs": {
-    "mtime": 1782754864.2193131,
-    "ast_hash": "b2f57a5869484281adfa482b6966204a",
-    "semantic_hash": "b2f57a5869484281adfa482b6966204a"
+    "mtime": 1786497045.8555527,
+    "ast_hash": "71032b378db678cd2d62ff39c8e256f6",
+    "semantic_hash": ""
   },
   "src/api-common.ts": {
     "mtime": 1782754118.6116798,
@@ -145,9 +145,9 @@
     "semantic_hash": "52d6cb33ed78605c2b015d569d69e430"
   },
   "src/main.ts": {
-    "mtime": 1785039880.386496,
-    "ast_hash": "8b214ce3821be6995573ef0873df3605",
-    "semantic_hash": "8b214ce3821be6995573ef0873df3605"
+    "mtime": 1786633898.6741223,
+    "ast_hash": "738ee6e736d83e49b7f4790ddc721cca",
+    "semantic_hash": ""
   },
   "src/panes/changelog-pane.ts": {
     "mtime": 1786036264.2618408,
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "src/panes/insert-callout-modal.ts": {
-    "mtime": 1786037814.2073913,
-    "ast_hash": "0d5f0be2e31cd846f81426ef1ffa75d9",
+    "mtime": 1786633564.130791,
+    "ast_hash": "213862cda3042b34e064332baf4b5bef",
     "semantic_hash": ""
   },
   "src/panes/manage-callouts-pane.ts": {
@@ -170,14 +170,14 @@
     "semantic_hash": ""
   },
   "src/ui/component/callout-preview.ts": {
-    "mtime": 1786036246.7673974,
-    "ast_hash": "0c1b1c394ca7f754d6d25091cb10b26b",
+    "mtime": 1786633126.188934,
+    "ast_hash": "f84ab61ce797ed716b3f207d761ac2c5",
     "semantic_hash": ""
   },
   "src/ui/component/icon-suggest.ts": {
-    "mtime": 1783708607.0287514,
-    "ast_hash": "ba59eb6028f9a18c1995245eee57d3bf",
-    "semantic_hash": "ba59eb6028f9a18c1995245eee57d3bf"
+    "mtime": 1786637926.180761,
+    "ast_hash": "d2610e4232bd57d1343d7f2f4815d2a0",
+    "semantic_hash": ""
   },
   "src/ui/component/reset-button.ts": {
     "mtime": 1782754118.6190042,
@@ -230,7 +230,7 @@
     "semantic_hash": "a2421e71781eeef10816c9be39010244"
   },
   "versions.json": {
-    "mtime": 1786040734.5560193,
+    "mtime": 1786638020.1974268,
     "ast_hash": "b48758c60fa2c7921a80b372816d064a",
     "semantic_hash": "b48758c60fa2c7921a80b372816d064a"
   },
@@ -240,8 +240,8 @@
     "semantic_hash": "43a0f3cbeee4a3b8ca3fb9592351510e"
   },
   "CLAUDE.md": {
-    "mtime": 1786040889.6449497,
-    "ast_hash": "b988e785755b180073370d4727934fbc",
+    "mtime": 1786637989.2687352,
+    "ast_hash": "053a00a940e2faee6f7a04be30ce4202",
     "semantic_hash": ""
   },
   "README.md": {
@@ -270,13 +270,38 @@
     "semantic_hash": "ee2cb4ac17ec8bf6ca0f1aa81f5ce3db"
   },
   "src/ui/component/callout-row.ts": {
-    "mtime": 1786039854.1820621,
-    "ast_hash": "f1e30af366725726ff8bd1161a334aa3",
+    "mtime": 1786633126.1891458,
+    "ast_hash": "2101fa3ff2416e94f4dbf215ea962c1e",
     "semantic_hash": ""
   },
   "docs/adr/0003-remove-callout-source-tracking.md": {
     "mtime": 1786040914.9768136,
     "ast_hash": "2f0b661f743d35d28c81388393106e21",
+    "semantic_hash": ""
+  },
+  "scripts/sync-lucide-icons.mjs": {
+    "mtime": 1786637873.3448224,
+    "ast_hash": "e4e50055d40bb85ef6117370cee67496",
+    "semantic_hash": ""
+  },
+  "src/icon-search.ts": {
+    "mtime": 1786637901.6675096,
+    "ast_hash": "3a34fcf59b7548e21556af1f0df84a0d",
+    "semantic_hash": ""
+  },
+  "src/lucide-icon-svgs.json": {
+    "mtime": 1786637878.4045987,
+    "ast_hash": "138bee9096aa99593d531179d3f57551",
+    "semantic_hash": ""
+  },
+  "src/lucide-icon-tags.json": {
+    "mtime": 1786637878.4130812,
+    "ast_hash": "bbbd9405dc05239e0faa2739bad3e58a",
+    "semantic_hash": ""
+  },
+  "src/lucide-icons.ts": {
+    "mtime": 1786637893.1908743,
+    "ast_hash": "a88e164fc9a39d2f036712513f3de5e8",
     "semantic_hash": ""
   }
 }

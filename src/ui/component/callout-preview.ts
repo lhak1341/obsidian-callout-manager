@@ -3,6 +3,8 @@ import { Component, getIcon } from 'obsidian';
 import { CalloutID } from '&callout';
 import { RGB } from '&color';
 
+import { resolveLucideIconId } from '../../lucide-icons';
+
 const NO_ATTACH = Symbol();
 
 export interface PreviewOptions {
@@ -105,7 +107,7 @@ export class CalloutPreviewComponent extends Component {
 
 		// Clear the icon element and append the SVG.
 		iconEl.empty();
-		const iconSvg = getIcon(icon);
+		const iconSvg = getIcon(resolveLucideIconId(icon));
 		if (iconSvg != null) {
 			this.iconEl.appendChild(iconSvg);
 		}

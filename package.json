@@ -12,7 +12,8 @@
 		"typecheck": "tsc --noEmit -skipLibCheck",
 		"lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.ts'",
 		"lint:fix": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.ts' --fix",
-		"format": "prettier -w src"
+		"format": "prettier -w src",
+		"sync:lucide": "node scripts/sync-lucide-icons.mjs"
 	},
 	"keywords": [],
 	"author": {
@@ -43,6 +44,7 @@
 		"esbuild-plugin-alias": "^0.2.1",
 		"eslint-plugin-obsidianmd": "^0.4.1",
 		"jest": "^30.4.2",
+		"lucide-static": "^1.31.0",
 		"obsidian": "latest",
 		"obsidian-undocumented": "^0.1.2",
 		"sass": "^1.101.0",

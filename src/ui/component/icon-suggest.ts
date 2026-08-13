@@ -1,4 +1,7 @@
-import { AbstractInputSuggest, App, getIconIds, setIcon } from 'obsidian';
+import { AbstractInputSuggest, App, setIcon } from 'obsidian';
+
+import { rankIconSuggestions } from '../../icon-search';
+import { allLucideIconNames, getLucideIconTags, resolveLucideIconId } from '../../lucide-icons';
 
 // Obsidian's icon resolver accepts both "lucide-cake" and the bare "cake" for
 // built-in Lucide icons. This plugin already stores/displays icon ids bare
@@ -21,14 +24,12 @@ export class IconSuggest extends AbstractInputSuggest<string> {
 	}
 
 	protected getSuggestions(query: string): string[] {
-		const q = query.trim().toLowerCase();
-		const all = getIconIds();
-		return q ? all.filter((id) => id.toLowerCase().includes(q)) : all;
+		return rankIconSuggestions(query, allLucideIconNames(), getLucideIconTags);
 	}
 
 	public renderSuggestion(iconId: string, el: HTMLElement): void {
 		el.addClass('calloutmanager-icon-suggest-item');
-		setIcon(el.createSpan({ cls: 'calloutmanager-icon-suggest-icon' }), iconId);
+		setIcon(el.createSpan({ cls: 'calloutmanager-icon-suggest-icon' }), resolveLucideIconId(iconId));
 		el.createSpan({ text: stripLucidePrefix(iconId) });
 	}
 
