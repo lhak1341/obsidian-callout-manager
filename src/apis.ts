@@ -76,6 +76,10 @@ export class CalloutManagerAPIs {
 		}
 	}
 
+	// The sole effective API-version validator (main.ts's newApiHandle/destroyApiHandle are
+	// pass-throughs to newHandle/destroyHandle above). Keep this even though only 'v1' exists:
+	// api/index.ts's getApi() types `version` as a bare string and crosses a real
+	// plugin-to-plugin boundary, so this is the one thing guarding that external input.
 	private assertV1(version: string): asserts version is 'v1' {
 		if (version !== 'v1') throw new Error(`Unsupported Callout Manager API: ${version}`);
 	}

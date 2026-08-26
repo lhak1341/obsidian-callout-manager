@@ -49,6 +49,8 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.cssApplier.setAttribute('data-callout-manager', 'style-overrides');
 		this.register(this.cssApplier);
 
+		// Kept as a closure (not a class method): it closes over this `settings` object so the
+		// repository's onSave callback and the css-change listener below share one function.
 		const applyStyles = () => {
 			const css = assembleStylesheet(
 				settings.callouts.settings,

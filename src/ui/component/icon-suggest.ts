@@ -29,6 +29,8 @@ export class IconSuggest extends AbstractInputSuggest<string> {
 
 	public renderSuggestion(iconId: string, el: HTMLElement): void {
 		el.addClass('calloutmanager-icon-suggest-item');
+		// resolveLucideIconId() directly, not iconIdForRender(): candidates here are never empty,
+		// so the DEFAULT_ICON_ID fallback would never trigger anyway.
 		setIcon(el.createSpan({ cls: 'calloutmanager-icon-suggest-icon' }), resolveLucideIconId(iconId));
 		el.createSpan({ text: stripLucidePrefix(iconId) });
 	}

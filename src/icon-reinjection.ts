@@ -53,6 +53,8 @@ export class IconReinjector {
 			const iconEl = callout.querySelector<HTMLElement>('.callout-icon');
 			if (!iconEl || iconEl.childElementCount > 0) continue;
 			const icon = getComputedStyle(callout).getPropertyValue('--callout-icon').trim();
+			// resolveLucideIconId() directly, not iconIdForRender(): a callout genuinely having
+			// no icon is valid here and must render none, so `icon` must stay unresolved when empty.
 			if (icon) setIcon(iconEl, resolveLucideIconId(icon));
 		}
 	}

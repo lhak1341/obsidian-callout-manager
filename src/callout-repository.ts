@@ -86,6 +86,8 @@ export class CalloutRepository implements CalloutStore {
 		this.onCalloutChanged(id);
 	}
 
+	// No duplicate-id guard: creating over an existing id is silently idempotent, unlike
+	// renameCustomCallout below (which throws). Don't assume symmetry between the two.
 	public createCustomCallout(id: CalloutID): void {
 		assertValidCalloutId(id);
 

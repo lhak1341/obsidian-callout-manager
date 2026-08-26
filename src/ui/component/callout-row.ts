@@ -37,6 +37,8 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 			// Read current color + icon overrides from saved settings.
 			const savedSettings = store.getCalloutSettings(callout.id);
 			const appearance = savedSettings ? determineAppearanceType(savedSettings) : null;
+			// Inline color/icon editing is only valid for 'unified' appearance; 'complex' settings
+			// (conditional, duplicate-key, or anything beyond color/icon) must be refused here.
 			const isComplex = appearance?.type === 'complex';
 			let currentColor = appearance?.type === 'unified' ? (appearance.color ?? '') : '';
 			let currentIcon = appearance?.type === 'unified' ? (appearance.otherChanges.icon ?? '') : '';
