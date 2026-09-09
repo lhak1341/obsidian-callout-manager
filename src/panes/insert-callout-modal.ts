@@ -7,6 +7,7 @@ import { filterAndSortCallouts } from '../callout-search';
 import { CalloutReader } from '../callout-store';
 import { DEFAULT_ICON_ID, iconIdForRender } from '../lucide-icons';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
+import { attachRovingTabindex, RovingTabindexHandle } from '&ui/component/roving-tabindex';
 
 export class InsertCalloutModal extends Modal {
 	private readonly plugin: CalloutReader;
@@ -92,40 +93,29 @@ export class InsertCalloutModal extends Modal {
 		];
 		const foldBtns: HTMLButtonElement[] = [];
 
-		const activateFold = (idx: number) => {
-			this.foldState = foldOptions[idx].value;
-			foldBtns.forEach((b, i) => {
-				b.toggleClass('is-active', i === idx);
-				b.tabIndex = i === idx ? 0 : -1;
-			});
-			this.refreshPreview();
-		};
-
 		for (let i = 0; i < foldOptions.length; i++) {
 			const opt = foldOptions[i];
 			const isActive = this.foldState === opt.value;
 			const btn = foldRow.createEl('button', {
 				text: opt.label,
 				cls: 'calloutmanager-insert-fold-btn' + (isActive ? ' is-active' : ''),
-				attr: { tabindex: isActive ? '0' : '-1' },
-			});
-			const capturedIdx = i;
-			btn.addEventListener('click', () => activateFold(capturedIdx));
-			btn.addEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-					e.preventDefault();
-					const next = (capturedIdx + 1) % foldOptions.length;
-					activateFold(next);
-					foldBtns[next].focus();
-				} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-					e.preventDefault();
-					const prev = (capturedIdx - 1 + foldOptions.length) % foldOptions.length;
-					activateFold(prev);
-					foldBtns[prev].focus();
-				}
 			});
 			foldBtns.push(btn);
 		}
+
+		let foldRoving: RovingTabindexHandle;
+		const activateFold = (idx: number) => {
+			this.foldState = foldOptions[idx].value;
+			foldBtns.forEach((b, i) => b.toggleClass('is-active', i === idx));
+			foldRoving.setActive(idx);
+			this.refreshPreview();
+		};
+		foldRoving = attachRovingTabindex(
+			foldBtns,
+			foldOptions.findIndex((o) => o.value === this.foldState),
+			{ activation: 'auto', onActivate: activateFold },
+		);
+		foldBtns.forEach((btn, i) => btn.addEventListener('click', () => activateFold(i)));
 
 		// === Title ===
 		const titleRow = root.createDiv({ cls: 'calloutmanager-insert-option-row' });
@@ -191,13 +181,18 @@ export class InsertCalloutModal extends Modal {
 		if (!gridEl) return;
 		gridEl.empty();
 
+		const select = (callout: Callout) => {
+			this.selectedCallout = callout;
+			this.refreshGrid();
+			this.refreshPreview();
+		};
+
 		const chips: HTMLElement[] = [];
 		for (let i = 0; i < this.filteredCallouts.length; i++) {
 			const callout = this.filteredCallouts[i];
 			const isSelected = this.selectedCallout?.id === callout.id;
 			const chip = gridEl.createDiv({
 				cls: 'calloutmanager-insert-chip' + (isSelected ? ' is-selected' : ''),
-				attr: { tabindex: '0' },
 			});
 			chips.push(chip);
 
@@ -208,24 +203,17 @@ export class InsertCalloutModal extends Modal {
 
 			chip.createSpan({ cls: 'calloutmanager-insert-chip-label', text: getTitleFromCallout(callout) });
 
-			const capturedIdx = i;
-			const select = () => {
-				this.selectedCallout = callout;
-				this.refreshGrid();
-				this.refreshPreview();
-			};
-			chip.addEventListener('click', select);
-			chip.addEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
-					select();
-				} else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-					e.preventDefault();
-					chips[(capturedIdx + 1) % chips.length]?.focus();
-				} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-					e.preventDefault();
-					chips[(capturedIdx - 1 + chips.length) % chips.length]?.focus();
-				}
+			chip.addEventListener('click', () => select(callout));
+		}
+
+		if (chips.length > 0) {
+			const activeIdx = Math.max(
+				0,
+				this.filteredCallouts.findIndex((c) => c.id === this.selectedCallout?.id),
+			);
+			attachRovingTabindex(chips, activeIdx, {
+				activation: 'manual',
+				onActivate: (idx) => select(this.filteredCallouts[idx]),
 			});
 		}
 

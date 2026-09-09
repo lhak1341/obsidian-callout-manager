@@ -19,7 +19,6 @@ export class UISettingTab extends PluginSettingTab {
 	private activePane: UIPane_FRIEND | undefined;
 
 	private titleEl!: HTMLElement;
-	private navEl!: HTMLElement;
 	private controlsEl!: HTMLElement;
 	private scrollEl!: HTMLElement;
 	private paneContainerEl!: HTMLElement;
@@ -51,7 +50,6 @@ export class UISettingTab extends PluginSettingTab {
 		containerEl.classList.add('calloutmanager-setting-tab', 'calloutmanager-pane');
 
 		const headerEl = containerEl.createDiv({ cls: 'calloutmanager-setting-tab-header' });
-		this.navEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-nav' });
 		this.titleEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-title' });
 
 		const headerControlsEl = headerEl.createDiv({ cls: 'calloutmanager-setting-tab-controls' });
@@ -105,12 +103,25 @@ export class UISettingTab extends PluginSettingTab {
 		}
 
 		titleEl.empty();
+		const { title } = activePane;
+		// This is the pane's header-bar title, not an in-list settings heading; Setting.setHeading()
+		// renders a full .setting-item row that doesn't fit the compact h2/h3 pair this header's CSS
+		// (below, .calloutmanager-setting-tab-title) is built for.
+		/* eslint-disable obsidianmd/settings-tab/no-manual-html-headings */
+		if (typeof title === 'string') {
+			titleEl.createEl('h2', { text: title });
+		} else {
+			titleEl.createEl('h2', { text: title.title });
+			titleEl.createEl('h3', { text: title.subtitle });
+		}
+		/* eslint-enable obsidianmd/settings-tab/no-manual-html-headings */
 
 		controlsEl.empty();
 		activePane.displayControls();
 
 		const hasControls = controlsEl.childElementCount > 0;
-		this.navEl.parentElement?.classList.toggle('calloutmanager-setting-tab-header--active', hasControls);
+		const hasTitle = titleEl.childElementCount > 0;
+		titleEl.parentElement?.classList.toggle('calloutmanager-setting-tab-header--active', hasControls || hasTitle);
 
 		paneContainerEl.empty();
 		activePane.display();
@@ -188,35 +199,7 @@ declare const STYLES: `
 		}
 	}
 
-	// The setting tab nav within the header.
-	.calloutmanager-setting-tab-nav {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		// Ensure the nav is at least as big as a button.
-		min-width: var(--size-4-12);
-		min-height: calc(var(--size-4-2) + var(--input-height));
-
-		// Override the button padding.
-		button {
-			padding: var(--size-4-1) var(--size-4-2);
-			box-shadow: none;
-		}
-
-		// Reduce padding for mobile.
-		body.is-mobile & {
-			padding: var(--size-4-2);
-		}
-
-		body.is-phone &,
-		body.is-phone & button {
-			height: 100%;
-			min-width: unset;
-		}
-	}
-
-	// The setting tab nav within the header.
+	// The setting tab controls within the header.
 	.calloutmanager-setting-tab-controls {
 		flex: 3 3;
 

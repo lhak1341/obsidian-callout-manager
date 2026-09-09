@@ -58,30 +58,6 @@ describe('CalloutCollection — resolving and caching', () => {
 	});
 });
 
-describe('CalloutCollection — hasChanged()', () => {
-	test('returns false until the collection changes, true after', () => {
-		const { collection } = makeCollection();
-		collection.add('note');
-		collection.values();
-
-		const changed = collection.hasChanged();
-		expect(changed()).toBe(false);
-
-		collection.add('warning');
-		expect(changed()).toBe(true);
-	});
-
-	test('re-adding an existing id does not count as a change', () => {
-		const { collection } = makeCollection();
-		collection.add('note');
-
-		const changed = collection.hasChanged();
-		collection.add('note');
-
-		expect(changed()).toBe(false);
-	});
-});
-
 describe('CalloutCollection.add()/delete()', () => {
 	test('add() introduces new callouts; re-adding an existing id is a no-op invalidation-wise', () => {
 		const { collection, resolver } = makeCollection();

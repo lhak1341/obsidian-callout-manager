@@ -11,13 +11,11 @@ export class CalloutCollection {
 	private resolver: (id: string) => Callout;
 
 	private invalidated: Set<CachedCallout>;
-	private invalidationCount: number;
 	private cacheById: Map<CalloutID, CachedCallout>;
 
 	public constructor(resolver: (id: string) => Callout) {
 		this.resolver = resolver;
 		this.invalidated = new Set();
-		this.invalidationCount = 0;
 		this.cacheById = new Map();
 	}
 
@@ -63,33 +61,18 @@ export class CalloutCollection {
 	}
 
 	/**
-	 * Returns a function that will return `true` if the collection has changed since the function was created.
-	 * @returns The function.
-	 */
-	public hasChanged(): () => boolean {
-		const countSnapshot = this.invalidationCount;
-		return () => this.invalidationCount !== countSnapshot;
-	}
-
-	/**
 	 * Adds callouts to the collection.
 	 * IDs that already exist are left as-is (not invalidated).
 	 *
 	 * @param ids The callout IDs.
 	 */
 	public add(...ids: CalloutID[]): void {
-		let anyAdded = false;
 		for (const id of ids) {
 			if (!this.cacheById.has(id)) {
 				const cached = new CachedCallout(id);
 				this.cacheById.set(id, cached);
 				this.invalidated.add(cached);
-				anyAdded = true;
 			}
-		}
-
-		if (anyAdded) {
-			this.invalidationCount++;
 		}
 	}
 
@@ -99,18 +82,12 @@ export class CalloutCollection {
 	 * @param ids The callout IDs.
 	 */
 	public delete(...ids: CalloutID[]): void {
-		let anyRemoved = false;
 		for (const id of ids) {
 			const cached = this.cacheById.get(id);
 			if (cached !== undefined) {
 				this.cacheById.delete(id);
 				this.invalidated.delete(cached);
-				anyRemoved = true;
 			}
-		}
-
-		if (anyRemoved) {
-			this.invalidationCount++;
 		}
 	}
 
