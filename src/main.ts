@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, debounce } from 'obsidian';
 import { CustomStyleSheet, createCustomStyleSheet } from 'obsidian-extra';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
@@ -77,14 +77,15 @@ export default class CalloutManagerPlugin extends Plugin {
 		//   Since the styles for a callout can change, we need to reload the styles in the resolver.
 		//   It's also a good idea to reapply our own styles, since the color scheme or theme could have changed.
 		//   Debounced to avoid redundant reapply calls when multiple events fire in quick succession.
-		let reapplyTimer = 0;
-		const reapplyDebounced = () => {
-			window.clearTimeout(reapplyTimer);
-			reapplyTimer = window.setTimeout(() => {
+		const reapplyDebounced = debounce(
+			() => {
 				this.calloutResolver.reloadStyles();
 				applyStyles();
-			}, 50);
-		};
+			},
+			50,
+			true,
+		);
+		this.register(() => reapplyDebounced.cancel());
 		this.registerEvent(this.app.workspace.on('css-change', reapplyDebounced));
 		this.registerEvent(this.app.workspace.on('layout-change', reapplyDebounced));
 
