@@ -5,8 +5,10 @@
 - `--callout-color` is **not** guaranteed to be an `R, G, B` triplet — per-callout overrides
   in `data.json` can hold a full CSS color (`#4caeaa`). Never wrap it in
   `rgb(var(--callout-color))`; pass it directly to functions taking a `<color>`.
-  `calloutSettingsToStyles`'s `toCssColor()` guards this — do not reintroduce an
-  unconditional `rgb()` wrap when porting upstream fixes.
+  `toCssColor()` (`src/util/color.ts`, shared by the stylesheet and `renderCalloutGlyph`)
+  guards this — do not reintroduce an unconditional `rgb()` wrap when porting upstream
+  fixes. It still converts a bare `R, G, B` triplet, but only for old stored `data.json`
+  values: the app floor is 1.13.0, so there is no `var()` probe or pre-1.13 triplet support.
 - `--callout-color` cascades passively (works even in Settings renderers), but
   `--callout-icon` requires an active `setIcon()` call timed to DOM insertion. Correct color
   with a missing icon means the injection fired before or without DOM attachment.
@@ -39,6 +41,12 @@ importing `obsidian` there breaks at least one of the two runners.
   `AliasStore` + `IconColorAdjustStore` + CRUD) and only `ManageCalloutsPane` needs all of
   it. Read-only consumers (`InsertCalloutModal`, `apis.ts`, `api-v1.ts`) should depend on the
   narrow interfaces directly.
+- Style inputs fan out: settings, alias groups, icon-color adjust, and theme/snippet/color-scheme
+  changes can each change any callout's resolved color or icon, since aliases inherit from their
+  canonical via propagation CSS. Route every such change through `CalloutRepository`'s
+  `invalidateAndNotify()` (user edits) or `environmentChanged()` (Obsidian-side changes) so the
+  whole cache drops and consumers get one `change`; do not invalidate by id. `environmentChanged()`
+  also pins the order: the probe reloads before the CSS is re-seeded.
 - `UIPane` (`src/ui/pane.ts`) hosts one pane at a time — no stack, nav, or suspend/restore
   (removed deliberately; see ADR-0001, Superseded). `ManageCalloutsPane` and `ChangelogPane`
   are the only subclasses.

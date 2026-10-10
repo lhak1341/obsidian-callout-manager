@@ -3,6 +3,7 @@ import { getCurrentColorScheme, getCurrentThemeID } from 'obsidian-extra';
 import type { ThemeID } from 'obsidian-undocumented';
 
 import { CalloutID } from '&callout';
+import { toCssColor } from '&color';
 
 /**
  * Gets the current environment that callouts are under.
@@ -17,20 +18,6 @@ export function currentCalloutEnvironment(app: App): CalloutEnvironment {
 		theme,
 		colorScheme: getCurrentColorScheme(app),
 	};
-}
-
-const COLOR_TRIPLET = /^\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*$/;
-
-/**
- * Normalizes a stored `color` value into a valid CSS `<color>`.
- *
- * Most values (hex, `var(...)`) are already valid CSS colors and must be passed through as-is —
- * wrapping them in `rgb(...)` produces invalid nested syntax (e.g. `rgb(#3079b0)`), which silently
- * drops the callout's background/border color. Only a bare `R, G, B` triplet (the legacy upstream
- * convention) needs the `rgb(...)` wrapper to become valid on its own.
- */
-function toCssColor(color: string): string {
-	return COLOR_TRIPLET.test(color) ? `rgb(${color})` : color;
 }
 
 /**

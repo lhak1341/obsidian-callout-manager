@@ -43,14 +43,41 @@ export function defaultSettings(): Settings {
 export function migrateSettings(into: Settings, from: Settings | undefined) {
 	return Object.assign(into, {
 		...from,
-		callouts: {
-			...into.callouts,
-			...(from?.callouts ?? {}),
-		},
-		// Preserve user's alias customisations; fall back to defaults on first run.
-		aliasGroups: from?.aliasGroups ?? into.aliasGroups,
+		callouts: migrateCallouts(from?.callouts, into.callouts),
+		// Preserve user's alias customisations; fall back to defaults on first run or bad data.
+		aliasGroups: migrateAliasGroups(from?.aliasGroups, into.aliasGroups),
 		iconColorAdjust: migrateIconColorAdjust(from?.iconColorAdjust, into.iconColorAdjust),
 	});
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Validates persisted `callouts`. A malformed container falls back to `fallback`; within a valid
+ * `settings` object, entries that aren't arrays are dropped so one bad entry can't discard (or
+ * crash on) its valid siblings.
+ */
+function migrateCallouts(from: unknown, fallback: Settings['callouts']): Settings['callouts'] {
+	if (!isPlainObject(from)) return fallback;
+	const { custom, settings } = from;
+	return {
+		custom: Array.isArray(custom) && custom.every((c) => typeof c === 'string') ? [...custom] : fallback.custom,
+		settings: isPlainObject(settings)
+			? (Object.fromEntries(Object.entries(settings).filter(([, v]) => Array.isArray(v))) as Settings['callouts']['settings'])
+			: fallback.settings,
+	};
+}
+
+/** Validates persisted `aliasGroups`; a malformed container falls back, malformed entries are dropped. */
+function migrateAliasGroups(from: unknown, fallback: Settings['aliasGroups']): Settings['aliasGroups'] {
+	if (!isPlainObject(from)) return fallback;
+	return Object.fromEntries(
+		Object.entries(from).filter(
+			([, v]) => Array.isArray(v) && v.every((a) => typeof a === 'string'),
+		),
+	) as Settings['aliasGroups'];
 }
 
 function isValidSchemeAdjust(value: unknown): value is IconColorAdjust {

@@ -58,4 +58,45 @@ describe('migrateSettings', () => {
 		const result = migrateSettings(defaultSettings(), persisted);
 		expect(result.iconColorAdjust).toStrictEqual(fallback);
 	});
+
+	describe('callouts and aliasGroups shape', () => {
+		const migrate = (from: unknown) => migrateSettings(defaultSettings(), from as never);
+
+		test('valid persisted values pass through', () => {
+			const persisted = defaultSettings();
+			persisted.callouts = { custom: ['note'], settings: { note: [{ changes: { color: 'red' } }] } };
+			persisted.aliasGroups = { note: ['memo'] };
+			const result = migrate(persisted);
+			expect(result.callouts).toStrictEqual(persisted.callouts);
+			expect(result.aliasGroups).toStrictEqual(persisted.aliasGroups);
+		});
+
+		test('malformed containers fall back to defaults', () => {
+			const result = migrate({ callouts: 'oops', aliasGroups: 42 });
+			expect(result.callouts).toStrictEqual(defaultSettings().callouts);
+			expect(result.aliasGroups).toStrictEqual(defaultSettings().aliasGroups);
+			const result2 = migrate({ callouts: { custom: 'x', settings: [] }, aliasGroups: [] });
+			expect(result2.callouts).toStrictEqual(defaultSettings().callouts);
+			expect(result2.aliasGroups).toStrictEqual(defaultSettings().aliasGroups);
+		});
+
+		test('custom with non-string entries falls back to the default list', () => {
+			const result = migrate({ callouts: { custom: ['note', 5], settings: {} } });
+			expect(result.callouts.custom).toStrictEqual([]);
+		});
+
+		test('malformed entries are dropped; valid siblings survive', () => {
+			const result = migrate({
+				callouts: { custom: ['a', 'b'], settings: { a: [{ changes: {} }], b: 'oops', c: null } },
+				aliasGroups: { good: ['x'], bad: 'oops', worse: [1] },
+			});
+			expect(Object.keys(result.callouts.settings)).toStrictEqual(['a']);
+			expect(result.aliasGroups).toStrictEqual({ good: ['x'] });
+		});
+
+		test('unknown top-level keys are preserved', () => {
+			const result = migrate({ calloutDetection: { x: 1 } }) as unknown as Record<string, unknown>;
+			expect(result.calloutDetection).toStrictEqual({ x: 1 });
+		});
+	});
 });

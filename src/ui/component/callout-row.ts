@@ -1,13 +1,12 @@
-import { DropdownComponent, Setting, setIcon } from 'obsidian';
+import { DropdownComponent, Notice, Setting } from 'obsidian';
 
 import { Callout } from '&callout';
-import { resolveColorToRgb } from '&color';
 
 import { determineAppearanceType, unifiedAppearanceToSettings } from '../../callout-appearance';
 import { AliasStore, CalloutReader, CalloutStore } from '../../callout-store';
 import { defaultColors } from '../../default_colors.json';
-import { iconIdForRender } from '../../lucide-icons';
-import { slugifyCalloutId } from '../../util/callout-id';
+import { isValidCalloutId, slugifyCalloutId } from '../../util/callout-id';
+import { renderCalloutGlyph } from './callout-glyph';
 import { IconSuggest } from './icon-suggest';
 
 export type CalloutRowStore = CalloutReader &
@@ -18,8 +17,11 @@ export interface CalloutRowOptions {
 	/** Rebuilds the whole pane (re-fetches, re-filters, re-sorts, re-renders every row). */
 	refresh: () => void;
 
-	/** Whether a search query is currently narrowing the visible callout list. */
-	isFiltering: () => boolean;
+	/**
+	 * Called after this row's alias list changed (the row has already re-rendered its own chips).
+	 * The pane decides whether that can affect which rows are visible.
+	 */
+	onAliasesChanged: () => void;
 }
 
 /**
@@ -50,19 +52,9 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 			new Setting(containerEl).then((setting) => {
 				// === Left side: icon (colored to match the callout) + title ===
 				const iconEl = setting.nameEl.createSpan({ cls: 'calloutmanager-row-icon' });
-				setIcon(iconEl, iconIdForRender(callout.icon));
-
-				const setIconColor = (colorValue: string) => {
-					const raw = colorValue || callout.color;
-					const rgbColor = resolveColorToRgb(raw, activeDocument);
-					if (rgbColor) {
-						iconEl.style.setProperty('--calloutmanager-row-icon-color', rgbColor);
-					} else {
-						iconEl.style.removeProperty('--calloutmanager-row-icon-color');
-					}
-				};
-
-				setIconColor(currentColor);
+				const paintIcon = (iconName: string) =>
+					renderCalloutGlyph(iconEl, { icon: iconName || callout.icon, color: currentColor || callout.color });
+				paintIcon('');
 
 				// === Name: editable inline input (every callout is user-created, so always renamable) ===
 				const nameInput = setting.nameEl.createEl('input', {
@@ -78,7 +70,8 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 					try {
 						store.renameCustomCallout(callout.id, newId);
 						options.refresh();
-					} catch {
+					} catch (error) {
+						new Notice(error instanceof Error ? error.message : String(error));
 						nameInput.value = callout.id;
 					}
 				};
@@ -110,7 +103,7 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 						});
 						const doAdd = () => {
 							const val = input.value.trim().toLowerCase();
-							if (val && !list.includes(val)) {
+							if (val && !list.includes(val) && val !== callout.id && isValidCalloutId(val)) {
 								commitAliasChange([...list, val]);
 							} else {
 								input.value = '';
@@ -124,17 +117,10 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 							.addEventListener('click', doAdd);
 					};
 
-					// Commits an alias list change. A search query can match alias text (see
-					// ManageCalloutsPane.applyFilter), so this row's own visibility might need to
-					// change too — something only a full pane refresh can resolve. Outside of an
-					// active search, a local re-render is enough and avoids rebuilding every row.
 					const commitAliasChange = (newList: string[]) => {
 						store.setAliasGroup(callout.id, newList);
-						if (options.isFiltering()) {
-							options.refresh();
-						} else {
-							renderChips(newList);
-						}
+						renderChips(newList);
+						options.onAliasesChanged();
 					};
 
 					renderChips(currentAliases);
@@ -152,7 +138,7 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 						dropdown.setValue(currentColor);
 						dropdown.onChange((value) => {
 							currentColor = value;
-							setIconColor(value);
+							paintIcon(currentIcon);
 							save();
 						});
 					});
@@ -164,19 +150,13 @@ export function makeCalloutRow(callout: Callout, store: CalloutRowStore, options
 					});
 					new IconSuggest(store.app, iconInput);
 
-					const refreshIconEl = (iconName: string) => {
-						iconEl.empty();
-						setIcon(iconEl, iconIdForRender(iconName || callout.icon));
-						setIconColor(currentColor);
-					};
-
 					iconInput.addEventListener('input', () => {
-						refreshIconEl(iconInput.value.trim());
+						paintIcon(iconInput.value.trim());
 					});
 					iconInput.addEventListener('change', () => {
 						currentIcon = iconInput.value.trim();
 						save();
-						refreshIconEl(currentIcon);
+						paintIcon(currentIcon);
 					});
 				}
 

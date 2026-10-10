@@ -5,6 +5,9 @@ import { CalloutID } from '&callout';
 import { IsolatedCalloutPreviewComponent } from '&ui/component/callout-preview';
 import { App } from 'obsidian';
 
+/** `data-callout-manager` value marking the plugin's own override `<style>` element. */
+export const STYLE_OVERRIDES_ID = 'style-overrides';
+
 /**
  * A class that fetches style information for callouts.
  * This keeps a Shadow DOM within the page document and uses getComputedStyles to get CSS variables.
@@ -41,7 +44,7 @@ export class CalloutResolver {
 	public reloadStyles(): void {
 		this.calloutPreview.setColorScheme(getCurrentColorScheme(this.obsidianApp));
 		this.calloutPreview.updateStyles();
-		this.calloutPreview.removeStyles((el) => el.getAttribute('data-callout-manager') === 'style-overrides');
+		this.calloutPreview.removeStyles((el) => el.getAttribute('data-callout-manager') === STYLE_OVERRIDES_ID);
 	}
 
 	/**
@@ -60,7 +63,7 @@ export class CalloutResolver {
 	 * @param callback A callback function to run. The styles may only be accessed through this.
 	 * @returns Whatever the callback function returned.
 	 */
-	public getCalloutStyles<T>(id: CalloutID, callback: (styles: CSSStyleDeclaration) => T): T {
+	private getCalloutStyles<T>(id: CalloutID, callback: (styles: CSSStyleDeclaration) => T): T {
 		const { calloutEl } = this.calloutPreview;
 		calloutEl.setAttribute('data-callout', id);
 
@@ -92,7 +95,7 @@ export class CalloutResolver {
 	 * @param css The CSS string to set.
 	 */
 	public setCustomStyles(css: string): void {
-		(this.calloutPreview.customStyleEl as HTMLStyleElement).textContent = css;
+		this.calloutPreview.customStyleEl.textContent = css;
 	}
 }
 

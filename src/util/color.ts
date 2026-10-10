@@ -163,37 +163,19 @@ export function parseColorHex(hex: string): RGB | RGBA | null {
 	return hexRGB;
 }
 
+const COLOR_TRIPLET = /^\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*$/;
+
 /**
- * Resolves a raw callout color string to an `rgb(r, g, b)` string for inline styling.
+ * Normalizes a stored `color` value into a valid CSS `<color>`.
  *
- * Handles three input formats:
- * - CSS var references: `var(--color-blue)` — probed via a temporary element on `doc.body`
- * - RGB triplets: `"82, 139, 212"` — wrapped into `rgb(…)`
- * - Hex: `#086ddd` or `#0cf` — converted to `rgb(r, g, b)`
- *
- * Returns `''` if the value cannot be resolved.
+ * Most values (hex, `var(...)`, `rgb(...)`, named colors) are already valid CSS colors and must be
+ * passed through as-is — wrapping them in `rgb(...)` produces invalid nested syntax (e.g.
+ * `rgb(#3079b0)`), which silently drops the color. Only a bare `R, G, B` triplet (the pre-1.13
+ * Obsidian / legacy upstream convention that old `data.json` files may still hold) needs the
+ * `rgb(...)` wrapper to become valid on its own.
  */
-export function resolveColorToRgb(raw: string, doc: Document): string {
-	if (!raw) return '';
-
-	let value = raw;
-	if (raw.startsWith('var(')) {
-		const varName = raw.match(/var\((--[^)]+)\)/)?.[1] ?? '';
-		if (!varName) return '';
-		const probe = doc.body.createDiv();
-		value = (doc.defaultView ?? window).getComputedStyle(probe).getPropertyValue(varName).trim();
-		probe.remove();
-		if (!value) return '';
-	}
-
-	// Triplet: "82, 139, 212"
-	if (/^\d/.test(value)) return `rgb(${value})`;
-
-	// Hex: "#086ddd" or "#0cf"
-	const parsed = parseColorHex(value);
-	if (parsed) return `rgb(${parsed.r}, ${parsed.g}, ${parsed.b})`;
-
-	return '';
+export function toCssColor(color: string): string {
+	return COLOR_TRIPLET.test(color) ? `rgb(${color})` : color;
 }
 
 function rgbComponentStringsToNumber(components: [string, string, string]): [number, number, number] | null {

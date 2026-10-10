@@ -1,7 +1,7 @@
 import type { CalloutID } from '&callout';
 import { CalloutEnvironment, CalloutSettings, calloutSettingsToCSS } from '&callout-settings';
 
-import { IconColorAdjust } from './callout-store';
+import { ICON_COLOR_ADJUST_LIMITS, IconColorAdjust } from './callout-store';
 
 const DEFAULT_CALLOUT_COLORS_CSS = `
 .callout[data-callout='note'],
@@ -115,8 +115,7 @@ export function assembleStylesheet(
  *
  * Emits nothing when both offsets are zero, so default output is unchanged.
  *
- * `saturation`/`lightness` are clamped to the same bounds as the settings UI's sliders
- * (±100 / ±50) — this is the only write path `IconColorAdjustStore` doesn't itself validate
+ * `saturation`/`lightness` are clamped to {@link ICON_COLOR_ADJUST_LIMITS}, the settings UI's slider bounds — this is the only write path `IconColorAdjustStore` doesn't itself validate
  * (e.g. a hand-edited `data.json`), and an unclamped offset can push `hsl(from ...)` out of
  * gamut (confirmed via live obsidian eval: extreme values produce a raw `color(srgb ...)`
  * with negative/>1 components instead of a displayable color).
@@ -126,8 +125,9 @@ function assembleIconColorAdjustCSS(adjust: IconColorAdjust | undefined): string
 		return '';
 	}
 
-	const saturation = clamp(adjust.saturation, -100, 100);
-	const lightness = clamp(adjust.lightness, -50, 50);
+	const limits = ICON_COLOR_ADJUST_LIMITS;
+	const saturation = clamp(adjust.saturation, limits.saturation.min, limits.saturation.max);
+	const lightness = clamp(adjust.lightness, limits.lightness.min, limits.lightness.max);
 
 	return (
 		`.callout-title, .callout-icon .svg-icon {\n` +

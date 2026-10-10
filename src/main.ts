@@ -1,4 +1,4 @@
-import { Plugin, debounce } from 'obsidian';
+import { MarkdownView, Plugin, debounce } from 'obsidian';
 import { CustomStyleSheet, createCustomStyleSheet } from 'obsidian-extra';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
@@ -7,9 +7,8 @@ import type { CalloutManager } from '../api';
 
 import { CalloutManagerAPIs } from './apis';
 import { CalloutRepository } from './callout-repository';
-import { CalloutResolver } from './callout-resolver';
+import { CalloutResolver, STYLE_OVERRIDES_ID } from './callout-resolver';
 import { currentCalloutEnvironment } from './callout-settings';
-import { assembleStylesheet } from './assemble-stylesheet';
 import { IconReinjector } from './icon-reinjection';
 import { registerLucideIcons } from './lucide-icons';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
@@ -46,42 +45,28 @@ export default class CalloutManagerPlugin extends Plugin {
 		// Create a plugin-managed style sheet.
 		//  -> This is used to apply the user's custom styles to callouts.
 		this.cssApplier = createCustomStyleSheet(this.app, this);
-		this.cssApplier.setAttribute('data-callout-manager', 'style-overrides');
+		this.cssApplier.setAttribute('data-callout-manager', STYLE_OVERRIDES_ID);
 		this.register(this.cssApplier);
 
-		// Kept as a closure (not a class method): it closes over this `settings` object so the
-		// repository's onSave callback and the css-change listener below share one function.
-		const applyStyles = () => {
-			const css = assembleStylesheet(
-				settings.callouts.settings,
-				settings.aliasGroups,
-				currentCalloutEnvironment(this.app),
-				settings.iconColorAdjust,
-			);
-			this.cssApplier.css = css;
-			this.calloutResolver.setCustomStyles(css);
-		};
-
-		// Create the callout repository.
-		this.repository = new CalloutRepository(
-			this.app,
-			settings,
-			(id) => this.calloutResolver.getCalloutProperties(id),
-			(data) => { applyStyles(); this.saveData(data); },
-			(id) => this.api.emitEventForCalloutChange(id),
-		);
-
-		applyStyles();
+		this.repository = new CalloutRepository(this.app, settings, {
+			probe: this.calloutResolver,
+			sink: {
+				setCss: (css) => {
+					this.cssApplier.css = css;
+					this.calloutResolver.setCustomStyles(css);
+				},
+			},
+			environment: () => currentCalloutEnvironment(this.app),
+			save: (data) => this.saveData(data),
+			onChange: () => this.api.emitEventForCalloutChange(),
+		});
 
 		// Register a listener for whenever the CSS changes or layout changes (e.g. floating windows open).
 		//   Since the styles for a callout can change, we need to reload the styles in the resolver.
 		//   It's also a good idea to reapply our own styles, since the color scheme or theme could have changed.
 		//   Debounced to avoid redundant reapply calls when multiple events fire in quick succession.
 		const reapplyDebounced = debounce(
-			() => {
-				this.calloutResolver.reloadStyles();
-				applyStyles();
-			},
+			() => this.repository.environmentChanged(),
 			50,
 			true,
 		);
@@ -111,8 +96,8 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.addCommand({
 			id: 'insert-callout',
 			name: 'Insert callout',
-			editorCallback: () => {
-				new InsertCalloutModal(this.repository).open();
+			editorCallback: (editor) => {
+				new InsertCalloutModal(this.repository, editor).open();
 			},
 		});
 
@@ -123,7 +108,8 @@ export default class CalloutManagerPlugin extends Plugin {
 		// Defer UI elements that don't need to be ready before the workspace loads.
 		this.app.workspace.onLayoutReady(() => {
 			this.addRibbonIcon('lucide-gallery-vertical', 'Insert callout', () => {
-				new InsertCalloutModal(this.repository).open();
+				const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null;
+				new InsertCalloutModal(this.repository, editor).open();
 			});
 		});
 	}

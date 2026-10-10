@@ -12,13 +12,25 @@ export interface CalloutReader {
 	getCalloutSettings(id: CalloutID): CalloutSettings | undefined;
 }
 
-export interface AliasStore {
+export interface AliasReader {
 	getAliasGroups(): Record<string, string[]>;
+}
+
+export interface AliasStore extends AliasReader {
 	setAliasGroup(canonical: string, aliases: string[]): void;
 }
 
 /** Global saturation/lightness offset applied to every callout header's color, for one color scheme. */
 export type IconColorAdjust = { saturation: number; lightness: number };
+
+/**
+ * Bounds of the saturation/lightness offsets. The settings sliders use them as their range and the
+ * stylesheet clamps to them, so a hand-edited `data.json` can't push `hsl(from ...)` out of gamut.
+ */
+export const ICON_COLOR_ADJUST_LIMITS = {
+	saturation: { min: -100, max: 100, step: 5 },
+	lightness: { min: -50, max: 50, step: 5 },
+} as const;
 
 export interface IconColorAdjustStore {
 	getIconColorAdjust(scheme: 'light' | 'dark'): IconColorAdjust;

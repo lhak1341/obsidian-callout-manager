@@ -1,10 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { parseColorHex, parseColorRGB, parseColorRGBA, resolveColorToRgb } from './color';
-
-// The var(--x) probing branch needs a real Document (createDiv/getComputedStyle) and
-// isn't exercised here; these calls never reach that branch so the doc param is unused.
-const noDoc = null as unknown as Document;
+import { parseColorHex, parseColorRGB, parseColorRGBA, toCssColor } from './color';
 
 describe('parseColorRGB', () => {
 	test('rgb(i, i, i)', () => {
@@ -153,23 +149,21 @@ describe('parseColorHex', () => {
 	});
 });
 
-describe('resolveColorToRgb', () => {
-	test('empty input', () => {
-		expect(resolveColorToRgb('', noDoc)).toBe('');
+describe('toCssColor', () => {
+	test('empty input stays empty', () => {
+		expect(toCssColor('')).toBe('');
 	});
 
-	test('rgb triplet passthrough', () => {
-		expect(resolveColorToRgb('82, 139, 212', noDoc)).toBe('rgb(82, 139, 212)');
+	test('bare R, G, B triplet is wrapped in rgb()', () => {
+		expect(toCssColor('82, 139, 212')).toBe('rgb(82, 139, 212)');
+		expect(toCssColor(' 82,139,212 ')).toBe('rgb( 82,139,212 )');
+		expect(toCssColor('10%, 20%, 30%')).toBe('rgb(10%, 20%, 30%)');
 	});
 
-	test('valid hex', () => {
-		expect(resolveColorToRgb('#086ddd', noDoc)).toBe('rgb(8, 109, 221)');
-		expect(resolveColorToRgb('#0cf', noDoc)).toBe('rgb(0, 204, 255)');
-	});
-
-	test('malformed hex does not silently produce NaN components', () => {
-		// A hand-rolled parser that only validates the red channel would turn this
-		// into 'rgb(0, NaN, NaN)'; the shared parser must reject it outright.
-		expect(resolveColorToRgb('#0gg', noDoc)).toBe('');
-	});
+	test.each(['#086ddd', '#0cf', 'var(--color-blue)', 'rgb(1, 2, 3)', 'hsl(200 50% 40%)', 'rebeccapurple'])(
+		'valid CSS color %p passes through unchanged',
+		(color) => {
+			expect(toCssColor(color)).toBe(color);
+		},
+	);
 });

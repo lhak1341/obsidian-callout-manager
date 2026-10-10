@@ -1,4 +1,4 @@
-import { ButtonComponent, Setting, SliderComponent, TextComponent, setIcon } from 'obsidian';
+import { ButtonComponent, Notice, Setting, TextComponent, setIcon } from 'obsidian';
 
 import { Callout } from '&callout';
 import { CalloutStore } from '../callout-store';
@@ -8,6 +8,7 @@ import { filterAndSortCallouts } from '../callout-search';
 import { DEFAULT_ICON_ID } from '../lucide-icons';
 import { isValidCalloutId, slugifyCalloutId } from '../util/callout-id';
 import { makeCalloutRow } from '&ui/component/callout-row';
+import { renderIconColorAdjustSection } from '&ui/component/icon-color-adjust-section';
 
 /**
  * The user interface pane for managing callouts.
@@ -23,6 +24,7 @@ export class ManageCalloutsPane extends UIPane {
 	private filteredCallouts: Callout[];
 	private isCreating = false;
 	private sortMode: 'name' | 'color' | 'icon' = 'name';
+	private listEl: HTMLElement | null = null;
 
 	public constructor(plugin: CalloutStore) {
 		super();
@@ -32,10 +34,15 @@ export class ManageCalloutsPane extends UIPane {
 		this.filteredCallouts = [];
 	}
 
+	/** Re-reads the callouts and rebuilds the list (not the slider section). */
 	private refresh(): void {
+		this.reload();
+		this.renderList();
+	}
+
+	private reload(): void {
 		this.allCallouts = this.plugin.getCallouts();
 		this.applyFilter();
-		this.display();
 	}
 
 	private applyFilter(): void {
@@ -48,19 +55,30 @@ export class ManageCalloutsPane extends UIPane {
 	/** @override */
 	public display(): void {
 		const { containerEl } = this;
+		containerEl.empty();
+
+		// The slider section never changes with the list, so it is built once per display() and
+		// the list below is rebuilt on its own (see renderList).
+		renderIconColorAdjustSection(containerEl, this.plugin);
+		this.listEl = containerEl.createDiv();
+		this.renderList();
+	}
+
+	private renderList(): void {
+		const { containerEl, listEl } = this;
+		if (!listEl) return;
+
 		const scrollEl = containerEl.parentElement;
 		const scrollTop = scrollEl?.scrollTop ?? 0;
 
-		containerEl.empty();
-
-		this.renderIconColorAdjustSection(containerEl);
+		listEl.empty();
 
 		if (!this.isCreating && this.filteredCallouts.length === 0) {
-			containerEl
+			listEl
 				.createDiv({ cls: 'calloutmanager-centerbox' })
 				.createEl('p', { text: 'No callouts found.', cls: 'calloutmanager-search-empty' });
 		} else {
-			const itemsEl = containerEl.createDiv('setting-group').createDiv('setting-items');
+			const itemsEl = listEl.createDiv('setting-group').createDiv('setting-items');
 
 			if (this.isCreating) {
 				this.renderCreateRow(itemsEl);
@@ -74,71 +92,6 @@ export class ManageCalloutsPane extends UIPane {
 		if (scrollTop > 0 && scrollEl) {
 			window.requestAnimationFrame(() => { scrollEl.scrollTop = scrollTop; });
 		}
-	}
-
-	private renderIconColorAdjustSection(containerEl: HTMLElement): void {
-		const groupEl = containerEl.createDiv('setting-group').createDiv('setting-items');
-		this.renderIconColorAdjustScheme(groupEl, 'light', 'Light mode');
-		this.renderIconColorAdjustScheme(groupEl, 'dark', 'Dark mode');
-	}
-
-	private renderIconColorAdjustScheme(
-		containerEl: HTMLElement,
-		scheme: 'light' | 'dark',
-		label: string,
-	): void {
-		const { plugin } = this;
-		const adjust = plugin.getIconColorAdjust(scheme);
-
-		let satSlider: SliderComponent;
-		let lightSlider: SliderComponent;
-
-		new Setting(containerEl)
-			.setName(`${label} header color`)
-			.setHeading()
-			.then(({ settingEl }) => settingEl.classList.add('calloutmanager-adjust-heading'))
-			.addExtraButton((btn) =>
-				btn
-					.setIcon('lucide-rotate-ccw')
-					.setTooltip('Reset to 0')
-					.onClick(() => {
-						adjust.saturation = 0;
-						adjust.lightness = 0;
-						plugin.setIconColorAdjust(scheme, { ...adjust });
-						satSlider.setValue(0);
-						lightSlider.setValue(0);
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName('Saturation')
-			.setDesc(`Shift every callout header's (icon + title text) color saturation in ${label.toLowerCase()}.`)
-			.addSlider((slider) => {
-				satSlider = slider;
-				slider
-					.setLimits(-100, 100, 5)
-					.setValue(adjust.saturation)
-					.setDynamicTooltip()
-					.onChange((value) => {
-						adjust.saturation = value;
-						plugin.setIconColorAdjust(scheme, { ...adjust });
-					});
-			});
-
-		new Setting(containerEl)
-			.setName('Lightness')
-			.setDesc(`Shift every callout header's (icon + title text) color lightness in ${label.toLowerCase()}.`)
-			.addSlider((slider) => {
-				lightSlider = slider;
-				slider
-					.setLimits(-50, 50, 5)
-					.setValue(adjust.lightness)
-					.setDynamicTooltip()
-					.onChange((value) => {
-						adjust.lightness = value;
-						plugin.setIconColorAdjust(scheme, { ...adjust });
-					});
-			});
 	}
 
 	private renderCreateRow(containerEl: HTMLElement): void {
@@ -155,7 +108,18 @@ export class ManageCalloutsPane extends UIPane {
 
 			const doCreate = () => {
 				const id = slugifyCalloutId(nameInput.value);
-				if (!id || !isValidCalloutId(id) || this.plugin.hasCallout(id)) {
+				if (!id) {
+					nameInput.focus();
+					return;
+				}
+				if (!isValidCalloutId(id)) {
+					new Notice(`Invalid callout id: '${id}'. Ids must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens.`);
+					nameInput.focus();
+					return;
+				}
+				// The repository accepts a duplicate create silently, so this is the only check.
+				if (this.plugin.hasCallout(id)) {
+					new Notice(`Callout '${id}' already exists.`);
 					nameInput.focus();
 					return;
 				}
@@ -168,7 +132,7 @@ export class ManageCalloutsPane extends UIPane {
 				if (e.key === 'Enter') doCreate();
 				if (e.key === 'Escape') {
 					this.isCreating = false;
-					this.display();
+					this.renderList();
 				}
 			});
 
@@ -186,7 +150,7 @@ export class ManageCalloutsPane extends UIPane {
 					.setTooltip('Cancel')
 					.onClick(() => {
 						this.isCreating = false;
-						this.display();
+						this.renderList();
 					}),
 			);
 
@@ -197,7 +161,12 @@ export class ManageCalloutsPane extends UIPane {
 	private renderCalloutRow(containerEl: HTMLElement, callout: Callout): void {
 		makeCalloutRow(callout, this.plugin, {
 			refresh: () => this.refresh(),
-			isFiltering: () => this.searchQuery.trim().length > 0,
+			// Search matches alias text (see applyFilter), so with a query active an alias edit can
+			// change which rows are visible — only a full refresh resolves that. Without a query a
+			// row's own re-render is enough and avoids rebuilding every row.
+			onAliasesChanged: () => {
+				if (this.searchQuery.trim().length > 0) this.refresh();
+			},
 		}).render(containerEl);
 	}
 
@@ -211,7 +180,7 @@ export class ManageCalloutsPane extends UIPane {
 			.onChange((q) => {
 				this.searchQuery = q;
 				this.applyFilter();
-				this.display();
+				this.renderList();
 			});
 
 		const sortCycle: Array<{ mode: 'name' | 'color' | 'icon'; icon: string; tooltip: string }> = [
@@ -230,7 +199,7 @@ export class ManageCalloutsPane extends UIPane {
 				sortBtn.setIcon(getSortEntry().icon);
 				sortBtn.setTooltip(getSortEntry().tooltip);
 				this.applyFilter();
-				this.display();
+				this.renderList();
 			})
 			.then((btn) => {
 				sortBtn = btn;
@@ -242,41 +211,22 @@ export class ManageCalloutsPane extends UIPane {
 			.setTooltip('New callout')
 			.onClick(() => {
 				this.isCreating = true;
-				this.display();
+				this.renderList();
 			})
 			.then(({ buttonEl }) => buttonEl.classList.add('clickable-icon'));
 	}
 
 	/** @override */
 	protected onReady(): void {
-		this.refresh();
+		this.reload();
 	}
 }
 
 declare const STYLES: `
-	/* Obsidian's .setting-item-heading has no left/right padding by default (it's meant to sit
-	   flush against its container); match the 20px inset of the sibling slider rows it's grouped
-	   with here so the heading text and reset button aren't flush against the card edge. */
-	/* Bottom padding is trimmed (vs. the 20px on every other side) because the sibling row right
-	   below already contributes its own 20px top padding — full 20px here would double that gap. */
-	.calloutmanager-adjust-heading.setting-item-heading {
-		padding: var(--size-4-5) var(--size-4-5) var(--size-4-1);
-
-		.setting-item-name {
-			font-size: var(--font-ui-medium);
-			font-weight: var(--font-bold);
-		}
-	}
-
 	.calloutmanager-row-icon {
 		display: inline-flex;
 		margin-right: 0.35em;
 		vertical-align: middle;
-
-		svg, .svg-icon {
-			stroke: var(--calloutmanager-row-icon-color);
-			color: var(--calloutmanager-row-icon-color);
-		}
 	}
 
 	.calloutmanager-row-complex-note {

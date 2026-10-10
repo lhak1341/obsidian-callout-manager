@@ -1,16 +1,16 @@
-# Graph Report - obsidian-callout-manager  (2026-09-09)
+# Graph Report - obsidian-callout-manager  (2026-10-10)
 
 ## Corpus Check
-- 64 files · ~131,134 words
+- 67 files · ~131,970 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 692 nodes · 883 edges · 195 communities (36 shown, 159 thin omitted)
+- 723 nodes · 948 edges · 195 communities (36 shown, 159 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 6 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1048217b`
+- Built from commit: `8fb8b882`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -201,16 +201,16 @@
 - What changed from upstream: removed manage-plugin pane/CSS export/reset-to-defaults in favor of one denser pane
 
 ## God Nodes (most connected - your core abstractions)
-1. `CalloutID` - 38 edges
-2. `Callout` - 27 edges
-3. `compilerOptions` - 20 edges
-4. `CalloutRepository` - 19 edges
-5. `CalloutStore` - 18 edges
-6. `ManageCalloutsPane` - 17 edges
-7. `CalloutCollection` - 16 edges
-8. `CalloutReader` - 15 edges
-9. `PluginReloader` - 14 edges
-10. `CalloutManagerAPI_V1` - 13 edges
+1. `CalloutID` - 35 edges
+2. `Callout` - 32 edges
+3. `CalloutRepository` - 22 edges
+4. `compilerOptions` - 20 edges
+5. `CalloutCollection` - 17 edges
+6. `CalloutStore` - 17 edges
+7. `ManageCalloutsPane` - 17 edges
+8. `InsertSession` - 15 edges
+9. `CalloutReader` - 14 edges
+10. `PluginReloader` - 14 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Callout List Row (abstract: aliases, color, icon)` --conceptually_related_to--> `ManageCalloutsPane`  [INFERRED]
@@ -237,11 +237,11 @@
 
 ### Community 0 - "Plugin API v1"
 Cohesion: 0.10
-Nodes (15): Appearance, ComplexAppearance, determineAppearanceType(), determineUnifiedAppearance(), UnifiedAppearance, unifiedAppearanceToSettings(), AliasStore, CalloutStore (+7 more)
+Nodes (19): Appearance, ComplexAppearance, determineAppearanceType(), determineUnifiedAppearance(), UnifiedAppearance, unifiedAppearanceToSettings(), CalloutSettingsChanges, AliasStore (+11 more)
 
 ### Community 1 - "Settings & Stylesheet Assembly"
-Cohesion: 0.07
-Nodes (28): CalloutID, assembleIconColorAdjustCSS(), assembleStylesheet(), clamp(), DEFAULT_CALLOUT_COLORS_CSS, CALLOUT_ALIAS_GROUPS, CachedCallout, CalloutCollection (+20 more)
+Cohesion: 0.06
+Nodes (32): CalloutID, assembleIconColorAdjustCSS(), assembleStylesheet(), clamp(), DEFAULT_CALLOUT_COLORS_CSS, CALLOUT_ALIAS_GROUPS, CachedCallout, CalloutCollection (+24 more)
 
 ### Community 2 - "Build Dev Dependencies"
 Cohesion: 0.05
@@ -249,11 +249,11 @@ Nodes (41): @babel/preset-env, @babel/preset-typescript, builtin-modules, @coder
 
 ### Community 3 - "Manage Callouts Pane UI"
 Cohesion: 0.10
-Nodes (20): Callout List Row (abstract: aliases, color, icon), Dark/Light Theme Comparison Composite (diagonal split), Per-Scheme Header Color Saturation/Lightness Adjuster, Manage Callouts Pane Screenshot (Dark/Light Split), Manage Callouts Settings Pane, Obsidian Settings Shell (sidebar: Options / Core plugins / Community plugins), currentCalloutEnvironment(), IconReinjector (+12 more)
+Nodes (19): Callout List Row (abstract: aliases, color, icon), Dark/Light Theme Comparison Composite (diagonal split), Per-Scheme Header Color Saturation/Lightness Adjuster, Manage Callouts Pane Screenshot (Dark/Light Split), Manage Callouts Settings Pane, Obsidian Settings Shell (sidebar: Options / Core plugins / Community plugins), currentCalloutEnvironment(), IconReinjector (+11 more)
 
 ### Community 4 - "Callout Resolver & Isolated Preview"
-Cohesion: 0.10
-Nodes (11): CalloutResolver, CalloutPreviewComponent, createLiveViewContainer(), createReadingViewContainer(), getCurrentStyles(), IsolatedCalloutPreviewComponent, IsolatedPreviewOptions, NO_ATTACH (+3 more)
+Cohesion: 0.11
+Nodes (9): CalloutProperties, CalloutResolver, CalloutPreviewComponent, createReadingViewContainer(), getCurrentStyles(), IsolatedCalloutPreviewComponent, IsolatedPreviewOptions, NO_ATTACH (+1 more)
 
 ### Community 5 - "Main Plugin & Pane Navigation"
 Cohesion: 0.11
@@ -272,8 +272,8 @@ Cohesion: 0.14
 Nodes (8): FULL_RELOAD_FILES, obsidian, onload(), onunload(), overriddenStylesEl, PluginReloader, STYLE_RELOAD_FILES, watchPlugin()
 
 ### Community 10 - "Plugin API Events & Handles"
-Cohesion: 0.08
-Nodes (16): Callout, CalloutProperties, CalloutManagerEvent, CalloutManagerEventListener, CalloutManagerEventMap, CalloutManager, CalloutManagerOwnedHandle, CalloutManagerUnownedHandle (+8 more)
+Cohesion: 0.11
+Nodes (13): CalloutManagerEvent, CalloutManagerEventListener, CalloutManagerEventMap, CalloutManager, CalloutManagerOwnedHandle, getApi(), isInstalled(), ObsidianAppWithPlugins (+5 more)
 
 ### Community 12 - "TSConfig Path Aliases"
 Cohesion: 0.11
@@ -284,8 +284,8 @@ Cohesion: 0.08
 Nodes (22): `Callout`, Callout Manager Plugin API, `CalloutID`, Functions, `getApi`, `getCallouts`, `getColor`, `getTitle` (+14 more)
 
 ### Community 16 - "Insert Modal & Color Utils"
-Cohesion: 0.15
-Nodes (15): filterAndSortCallouts(), FilterAndSortCalloutsOptions, getColorFromCallout(), getTitleFromCallout(), InsertCalloutModal, attachRovingTabindex(), RovingTabindexActivation, RovingTabindexHandle (+7 more)
+Cohesion: 0.06
+Nodes (27): Callout, CalloutManagerUnownedHandle, filterAndSortCallouts(), FilterAndSortCalloutsOptions, AliasReader, getColorFromCallout(), getTitleFromCallout(), FoldState (+19 more)
 
 ### Community 18 - "Test Preload Mocks"
 Cohesion: 0.20
@@ -340,7 +340,7 @@ Nodes (3): Live testing in the vault, Testing, Unit tests (Jest + bun, both)
   docs/images/screenshot_manage_pane_darklight.png · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **306 isolated node(s):** `CalloutProperties`, `ObsidianAppWithPlugins`, `extends`, `../tsconfig.json`, `*.ts` (+301 more)
+- **310 isolated node(s):** `CalloutProperties`, `ObsidianAppWithPlugins`, `extends`, `../tsconfig.json`, `*.ts` (+305 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **159 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -352,12 +352,12 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `paths` connect `TSConfig Path Aliases` to `TypeScript Config & Test Refs`?**
   _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Why does `&plugin` connect `TSConfig Path Aliases` to `Plugin API Events & Handles`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
 - **Why does `compilerOptions` connect `TypeScript Config & Test Refs` to `TSConfig Path Aliases`?**
   _High betweenness centrality (0.041) - this node is a cross-community bridge._
 - **What connects `CalloutProperties`, `ObsidianAppWithPlugins`, `extends` to the rest of the system?**
-  _306 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _310 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Plugin API v1` be split into smaller, more focused modules?**
-  _Cohesion score 0.10476190476190476 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10121951219512196 - nodes in this community are weakly interconnected._
 - **Should `Settings & Stylesheet Assembly` be split into smaller, more focused modules?**
-  _Cohesion score 0.07130333138515488 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06335403726708075 - nodes in this community are weakly interconnected._

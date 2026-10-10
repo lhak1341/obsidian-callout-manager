@@ -105,6 +105,15 @@ export class CalloutCollection {
 	}
 
 	/**
+	 * Marks every callout as invalidated.
+	 */
+	public invalidateAll(): void {
+		for (const cached of this.cacheById.values()) {
+			this.invalidated.add(cached);
+		}
+	}
+
+	/**
 	 * Resolves the settings of a callout.
 	 * This removes it from the set of invalidated callout caches.
 	 *

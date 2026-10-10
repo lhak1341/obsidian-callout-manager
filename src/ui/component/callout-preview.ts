@@ -1,7 +1,6 @@
 import { Component, getIcon } from 'obsidian';
 
 import { CalloutID } from '&callout';
-import { RGB } from '&color';
 
 import { resolveLucideIconId } from '../../lucide-icons';
 
@@ -18,11 +17,6 @@ export interface PreviewOptions {
 	 * This should be known in advance.
 	 */
 	icon: string;
-
-	/**
-	 * The color of the callout.
-	 */
-	color?: RGB;
 
 	/**
 	 * The title to show.
@@ -47,7 +41,7 @@ export class CalloutPreviewComponent extends Component {
 
 	public constructor(containerEl: HTMLElement | DocumentFragment | typeof NO_ATTACH, options: PreviewOptions) {
 		super();
-		const { color, icon, id, title, content } = options;
+		const { icon, id, title, content } = options;
 
 		const frag = activeDocument.createDocumentFragment();
 
@@ -60,8 +54,7 @@ export class CalloutPreviewComponent extends Component {
 			content === undefined ? undefined : calloutEl.createDiv({ cls: 'callout-content' }));
 
 		this.setIcon(icon);
-		this.setColor(color);
-		this.setCalloutID(id);
+		calloutEl.setAttribute('data-callout', id);
 
 		// Set the callout title.
 		if (title == null) titleEl.textContent = id;
@@ -78,20 +71,8 @@ export class CalloutPreviewComponent extends Component {
 
 		// Attach to the container.
 		if (containerEl != NO_ATTACH) {
-			CalloutPreviewComponent.prototype.attachTo.call(this, containerEl);
+			containerEl.appendChild(calloutEl);
 		}
-	}
-
-	/**
-	 * Changes the callout ID.
-	 * This will *not* change the appearance of the preview.
-	 *
-	 * @param id The new ID to use.
-	 */
-	public setCalloutID(id: string): typeof this {
-		const { calloutEl } = this;
-		calloutEl.setAttribute('data-callout', id);
-		return this;
 	}
 
 	/**
@@ -116,34 +97,6 @@ export class CalloutPreviewComponent extends Component {
 	}
 
 	/**
-	 * Changes the callout color.
-	 *
-	 * @param color The color to use.
-	 */
-	public setColor(color: RGB | undefined): typeof this {
-		const { calloutEl } = this;
-
-		if (color == null) {
-			calloutEl.style.removeProperty('--callout-color');
-			return this;
-		}
-
-		calloutEl.style.setProperty('--callout-color', `rgb(${color.r}, ${color.g}, ${color.b})`);
-		return this;
-	}
-
-	/**
-	 * Attaches the callout preview to a DOM element.
-	 * This places it at the end of the element.
-	 *
-	 * @param containerEl The container to attach to.
-	 */
-	public attachTo(containerEl: HTMLElement | DocumentFragment): typeof this {
-		containerEl.appendChild(this.calloutEl);
-		return this;
-	}
-
-	/**
 	 * Resets the `--callout-color` and `--callout-icon` CSS properties added to the callout element.
 	 */
 	public resetStylePropertyOverrides() {
@@ -155,10 +108,6 @@ export class CalloutPreviewComponent extends Component {
 
 export interface IsolatedPreviewOptions extends PreviewOptions {
 	colorScheme: 'dark' | 'light';
-
-	focused?: boolean;
-	viewType?: 'source' | 'reading';
-	cssEls?: (HTMLStyleElement | HTMLLinkElement)[];
 }
 
 /**
@@ -179,10 +128,8 @@ export class IsolatedCalloutPreviewComponent extends CalloutPreviewComponent {
 		super(NO_ATTACH, options);
 
 		const frag = activeDocument.createDocumentFragment();
-		const focused = options.focused ?? false;
 		const colorScheme = options.colorScheme;
-		const readingView = (options.viewType ?? 'reading') === 'reading';
-		const cssEls = options?.cssEls ?? getCurrentStyles(containerEl?.doc);
+		const cssEls = getCurrentStyles(containerEl?.doc);
 
 		// Create a shadow dom.
 		const shadowHostEl = (this.shadowHostEl = frag.createDiv());
@@ -219,21 +166,17 @@ export class IsolatedCalloutPreviewComponent extends CalloutPreviewComponent {
 			.createDiv({ cls: 'horizontal-main-container' })
 			.createDiv({ cls: 'workspace' })
 			.createDiv({ cls: 'workspace-split mod-root' })
-			.createDiv({ cls: `workspace-tabs ${focused ? 'mod-active' : ''}` })
+			.createDiv({ cls: 'workspace-tabs' })
 			.createDiv({ cls: 'workspace-tab-container' })
-			.createDiv({ cls: `workspace-leaf ${focused ? 'mod-active' : ''}` })
+			.createDiv({ cls: 'workspace-leaf' })
 			.createDiv({ cls: 'workspace-leaf-content' })
 			.createDiv({ cls: 'view-content' });
 
-		const calloutParentEl = readingView
-			? createReadingViewContainer(viewContentEl)
-			: createLiveViewContainer(viewContentEl);
-
-		calloutParentEl.appendChild(this.calloutEl);
+		createReadingViewContainer(viewContentEl).appendChild(this.calloutEl);
 
 		// Attach to the container.
 		if (containerEl != null) {
-			IsolatedCalloutPreviewComponent.prototype.attachTo.call(this, containerEl as HTMLElement);
+			containerEl.appendChild(shadowHostEl);
 		}
 	}
 
@@ -254,7 +197,7 @@ export class IsolatedCalloutPreviewComponent extends CalloutPreviewComponent {
 	 *
 	 * @param styleEls The new style elements to use. These will *not* be cloned.
 	 */
-	public updateStylesWith(styleEls: HTMLStyleElement[]): typeof this {
+	private updateStylesWith(styleEls: HTMLStyleElement[]): typeof this {
 		const { styleEls: oldStyleEls, customStyleEl } = this;
 
 		// Replace the styles.
@@ -307,18 +250,6 @@ export class IsolatedCalloutPreviewComponent extends CalloutPreviewComponent {
 		classList.toggle('theme-light', colorScheme === 'light');
 		return this;
 	}
-
-	/**
-	 * Attaches the callout preview to a DOM element.
-	 * This places it at the end of the element.
-	 *
-	 * @param containerEl The container to attach to.
-	 * @override
-	 */
-	public attachTo(containerEl: HTMLElement): typeof this {
-		containerEl.appendChild(this.shadowHostEl);
-		return this;
-	}
 }
 
 /**
@@ -356,26 +287,6 @@ function createReadingViewContainer(viewContentEl: HTMLDivElement): HTMLDivEleme
 		.createDiv();
 }
 
-/**
- * Creates a DOM representation of the Obsidian live editor view.
- * A callout placed within the returned container will act as though it is inside a Markdown document's CodeMirror editor.
- *
- * @param viewContentEl The `.view-content` container element.
- * @returns A container to attach a callout to.
- */
-function createLiveViewContainer(viewContentEl: HTMLDivElement): HTMLDivElement {
-	// div.markdown-source-view.cm-s-obsidian.mod-cm6.is-live-preview div.cm-editor.ͼ1.ͼ2.ͼq div.cm-scroller
-	// div.cm-sizer div.cm-contentContainer div.cm-content div.cm-embed-block.markdown-rendered.cm-callout
-	return viewContentEl
-		.createDiv({ cls: 'markdown-source-view cm-s-obsidian mod-cm6 is-live-preview' })
-		.createDiv({ cls: 'cm-editor ͼ1 ͼ2 ͼq' })
-		.createDiv({ cls: 'cm-scroller' })
-		.createDiv({ cls: 'cm-sizer' })
-		.createDiv({ cls: 'cm-contentContainer' })
-		.createDiv({ cls: 'cm-content' })
-		.createDiv({ cls: 'cm-embed-block markdown-rendered cm-callout' });
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
 // Styles:
 // ---------------------------------------------------------------------------------------------------------------------
@@ -406,32 +317,23 @@ const SHADOW_DOM_RESET_STYLES = `
 .workspace-leaf-content,
 .view-content,
 .markdown-reading-view,
-.markdown-source-view,
-.cm-editor.ͼ1.ͼ2.ͼq,
-.cm-editor.ͼ1.ͼ2.ͼq > .cm-scroller,
-.cm-sizer,
-.cm-contentContainer,
-.cm-content,
 .markdown-preview-view {
 	all: initial !important;
 	display: block !important;
 }
 
 /* Set the text color of the container for the callout. */
-.markdown-preview-section,
-.cm-callout {
+.markdown-preview-section {
 	color: var(--text-normal) !important;
 }
 
 /* Override margin on callout to keep the preview as small as possible. */
 .markdown-preview-section > div > .callout,
-.cm-callout > .callout,
 .calloutmanager-preview.callout {
 	margin: 0 !important;
 }
 
 /* Set the font properties of the callout. */
-.cm-callout,
 .callout {
 	font-size: var(--font-text-size) !important;
 	font-family: var(--font-text) !important;

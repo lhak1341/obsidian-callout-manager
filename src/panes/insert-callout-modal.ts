@@ -1,42 +1,28 @@
-import { MarkdownView, Modal, setIcon } from 'obsidian';
+import { Editor, Modal } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
-import { resolveColorToRgb } from '&color';
-import { filterAndSortCallouts } from '../callout-search';
-import { CalloutReader } from '../callout-store';
-import { DEFAULT_ICON_ID, iconIdForRender } from '../lucide-icons';
+import { InsertSession } from '../insert-session';
+import { AliasReader, CalloutReader } from '../callout-store';
+import { DEFAULT_ICON_ID } from '../lucide-icons';
+import { renderCalloutGlyph } from '&ui/component/callout-glyph';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
 import { attachRovingTabindex, RovingTabindexHandle } from '&ui/component/roving-tabindex';
 
 export class InsertCalloutModal extends Modal {
-	private readonly plugin: CalloutReader;
-	private allCallouts: Callout[];
-	private filteredCallouts: Callout[];
-	private selectedCallout: Callout | null = null;
-	private foldState: '' | '+' | '-' = '';
-	private titleValue = '';
-	private contentValue = '';
-	private searchQuery = '';
+	private readonly session: InsertSession;
+	private readonly editor: Editor | null;
 
 	private gridEl: HTMLElement | null = null;
 	private previewContainer: HTMLElement | null = null;
 
-	public constructor(plugin: CalloutReader) {
+	public constructor(plugin: CalloutReader & AliasReader, editor: Editor | null) {
 		super(plugin.app);
-		this.plugin = plugin;
-		this.allCallouts = plugin.getCallouts();
-		this.filteredCallouts = filterAndSortCallouts(this.allCallouts, '');
-		if (this.filteredCallouts.length > 0) {
-			this.selectedCallout = this.filteredCallouts[0];
-		}
-
-		// Pre-fill content from editor selection.
-		const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-		if (view) {
-			const sel = view.editor.getSelection();
-			if (sel) this.contentValue = sel;
-		}
+		this.editor = editor;
+		this.session = new InsertSession(plugin.getCallouts(), {
+			aliasGroups: plugin.getAliasGroups(),
+			initialContent: editor?.getSelection() || undefined,
+		});
 	}
 
 	public onOpen(): void {
@@ -62,13 +48,7 @@ export class InsertCalloutModal extends Modal {
 
 		// Auto-select first result and navigate on keydown from search.
 		searchEl.addEventListener('input', () => {
-			this.searchQuery = searchEl.value;
-			this.applyFilter();
-			// Keep selection live: auto-pick the first visible match.
-			if (this.filteredCallouts.length > 0 &&
-				!this.filteredCallouts.some((c) => c.id === this.selectedCallout?.id)) {
-				this.selectedCallout = this.filteredCallouts[0];
-			}
+			this.session.setQuery(searchEl.value);
 			this.refreshGrid();
 			this.refreshPreview();
 		});
@@ -95,7 +75,7 @@ export class InsertCalloutModal extends Modal {
 
 		for (let i = 0; i < foldOptions.length; i++) {
 			const opt = foldOptions[i];
-			const isActive = this.foldState === opt.value;
+			const isActive = this.session.fold === opt.value;
 			const btn = foldRow.createEl('button', {
 				text: opt.label,
 				cls: 'calloutmanager-insert-fold-btn' + (isActive ? ' is-active' : ''),
@@ -105,14 +85,14 @@ export class InsertCalloutModal extends Modal {
 
 		let foldRoving: RovingTabindexHandle;
 		const activateFold = (idx: number) => {
-			this.foldState = foldOptions[idx].value;
+			this.session.setFold(foldOptions[idx].value);
 			foldBtns.forEach((b, i) => b.toggleClass('is-active', i === idx));
 			foldRoving.setActive(idx);
 			this.refreshPreview();
 		};
 		foldRoving = attachRovingTabindex(
 			foldBtns,
-			foldOptions.findIndex((o) => o.value === this.foldState),
+			foldOptions.findIndex((o) => o.value === this.session.fold),
 			{ activation: 'auto', onActivate: activateFold },
 		);
 		foldBtns.forEach((btn, i) => btn.addEventListener('click', () => activateFold(i)));
@@ -124,9 +104,9 @@ export class InsertCalloutModal extends Modal {
 			cls: 'calloutmanager-insert-title-input',
 			attr: { type: 'text', placeholder: 'Leave blank for default' },
 		});
-		titleInput.value = this.titleValue;
+		titleInput.value = this.session.title;
 		titleInput.addEventListener('input', () => {
-			this.titleValue = titleInput.value;
+			this.session.setTitle(titleInput.value);
 			this.refreshPreview();
 		});
 
@@ -137,9 +117,9 @@ export class InsertCalloutModal extends Modal {
 			cls: 'calloutmanager-insert-content-input',
 			attr: { placeholder: 'Callout body text…', rows: '3' },
 		});
-		contentTextarea.value = this.contentValue;
+		contentTextarea.value = this.session.content;
 		contentTextarea.addEventListener('input', () => {
-			this.contentValue = contentTextarea.value;
+			this.session.setContent(contentTextarea.value);
 			this.refreshPreview();
 		});
 		// Cmd/Ctrl+Enter to insert from inside the textarea.
@@ -172,34 +152,29 @@ export class InsertCalloutModal extends Modal {
 		window.setTimeout(() => searchEl.focus(), 0);
 	}
 
-	private applyFilter(): void {
-		this.filteredCallouts = filterAndSortCallouts(this.allCallouts, this.searchQuery);
-	}
-
 	private refreshGrid(): void {
 		const { gridEl } = this;
 		if (!gridEl) return;
 		gridEl.empty();
 
+		const { filtered, selected } = this.session;
 		const select = (callout: Callout) => {
-			this.selectedCallout = callout;
+			this.session.select(callout.id);
 			this.refreshGrid();
 			this.refreshPreview();
 		};
 
 		const chips: HTMLElement[] = [];
-		for (let i = 0; i < this.filteredCallouts.length; i++) {
-			const callout = this.filteredCallouts[i];
-			const isSelected = this.selectedCallout?.id === callout.id;
+		for (let i = 0; i < filtered.length; i++) {
+			const callout = filtered[i];
+			const isSelected = selected?.id === callout.id;
 			const chip = gridEl.createDiv({
 				cls: 'calloutmanager-insert-chip' + (isSelected ? ' is-selected' : ''),
 			});
 			chips.push(chip);
 
 			const iconEl = chip.createSpan({ cls: 'calloutmanager-insert-chip-icon' });
-			setIcon(iconEl, iconIdForRender(callout.icon));
-			const rgb = resolveColorToRgb(callout.color ?? '', activeDocument);
-			if (rgb) iconEl.style.setProperty('--calloutmanager-insert-icon-color', rgb);
+			renderCalloutGlyph(iconEl, callout);
 
 			chip.createSpan({ cls: 'calloutmanager-insert-chip-label', text: getTitleFromCallout(callout) });
 
@@ -209,53 +184,43 @@ export class InsertCalloutModal extends Modal {
 		if (chips.length > 0) {
 			const activeIdx = Math.max(
 				0,
-				this.filteredCallouts.findIndex((c) => c.id === this.selectedCallout?.id),
+				filtered.findIndex((c) => c.id === selected?.id),
 			);
 			attachRovingTabindex(chips, activeIdx, {
 				activation: 'manual',
-				onActivate: (idx) => select(this.filteredCallouts[idx]),
+				onActivate: (idx) => select(filtered[idx]),
 			});
 		}
 
-		if (this.filteredCallouts.length === 0) {
+		if (filtered.length === 0) {
 			gridEl.createEl('p', { cls: 'calloutmanager-insert-empty', text: 'No callouts found.' });
 		}
 	}
 
 	private refreshPreview(): void {
-		const { previewContainer, selectedCallout } = this;
+		const { previewContainer } = this;
 		if (!previewContainer) return;
 		previewContainer.empty();
-		if (!selectedCallout) return;
 
-		const title = this.titleValue.trim() || getTitleFromCallout(selectedCallout);
-		const content = this.contentValue.trim() || undefined;
+		const preview = this.session.preview();
+		const callout = this.session.selected;
+		if (!preview || !callout) return;
 
 		new CalloutPreviewComponent(previewContainer, {
-			id: selectedCallout.id,
-			icon: selectedCallout.icon || DEFAULT_ICON_ID,
-			title,
-			content,
+			...preview,
+			icon: callout.icon || DEFAULT_ICON_ID,
 		});
 	}
 
 	private doInsert(): void {
-		if (!this.selectedCallout) return;
-
-		const { id } = this.selectedCallout;
-		const fold = this.foldState;
-		const title = this.titleValue.trim() || '%% %%';
-		const rawContent = this.contentValue.trim();
-		const body = rawContent ? rawContent.replace(/\n/g, '\n> ') : ' ';
-
-		const markdown = `> [!${id}]${fold} ${title}\n> ${body}`;
-
-		const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-		if (view) {
-			const cursor = view.editor.getCursor();
-			view.editor.replaceRange(markdown, cursor);
-			const lines = markdown.split('\n');
-			view.editor.setCursor(cursor.line + lines.length - 1, lines[lines.length - 1].length);
+		const { editor } = this;
+		if (editor) {
+			const from = editor.getCursor('from');
+			const insertion = this.session.toInsertion(from);
+			if (insertion) {
+				editor.replaceRange(insertion.text, from, editor.getCursor('to'));
+				editor.setCursor(insertion.cursor.line, insertion.cursor.ch);
+			}
 		}
 
 		this.close();
@@ -340,8 +305,6 @@ declare const STYLES: `
 		svg, .svg-icon {
 			width: 16px;
 			height: 16px;
-			stroke: var(--calloutmanager-insert-icon-color, var(--text-muted));
-			color: var(--calloutmanager-insert-icon-color, var(--text-muted));
 		}
 	}
 

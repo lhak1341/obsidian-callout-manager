@@ -1,6 +1,6 @@
 import { Plugin } from 'obsidian';
 
-import { CalloutID, CalloutManager } from '../api';
+import { CalloutManager } from '../api';
 
 import { destroy, emitter } from './api-common';
 import { CalloutManagerAPI_V1 } from './api-v1';
@@ -70,7 +70,7 @@ export class CalloutManagerAPIs {
 		this.handles.delete(consumerPlugin);
 	}
 
-	public emitEventForCalloutChange(id?: CalloutID) {
+	public emitEventForCalloutChange() {
 		for (const handle of this.handles.values()) {
 			handle[emitter].trigger('change');
 		}

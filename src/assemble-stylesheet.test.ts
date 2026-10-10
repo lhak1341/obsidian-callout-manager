@@ -1,6 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
 import { assembleStylesheet } from './assemble-stylesheet';
+import { ICON_COLOR_ADJUST_LIMITS } from './callout-store';
 
 const env = { theme: 'DefaultTheme', colorScheme: 'dark' as const };
 
@@ -131,6 +132,22 @@ describe('assembleStylesheet — iconColorAdjust', () => {
 		});
 		expect(css).toContain('calc(s + -100)');
 		expect(css).toContain('calc(l + -50)');
+	});
+
+	test('the clamp follows the shared limits the UI sliders use', () => {
+		const { saturation, lightness } = ICON_COLOR_ADJUST_LIMITS;
+		const at = (sat: number, light: number) =>
+			assembleStylesheet({}, {}, env, {
+				light: { saturation: 0, lightness: 0 },
+				dark: { saturation: sat, lightness: light },
+			});
+		expect(at(saturation.max, lightness.max)).toContain(`calc(s + ${saturation.max}) calc(l + ${lightness.max})`);
+		expect(at(saturation.max + 1, lightness.max + 1)).toContain(
+			`calc(s + ${saturation.max}) calc(l + ${lightness.max})`,
+		);
+		expect(at(saturation.min - 1, lightness.min - 1)).toContain(
+			`calc(s + ${saturation.min}) calc(l + ${lightness.min})`,
+		);
 	});
 
 	test('offsets stay unitless — % silently breaks Chromium\'s relative-color calc()', () => {
