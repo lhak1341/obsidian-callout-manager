@@ -4,9 +4,8 @@ import { Callout } from '&callout';
 import { CalloutStore } from '../callout-store';
 import { UIPane } from '&ui/pane';
 
-import { filterAndSortCallouts } from '../callout-search';
+import { ManageSession, SortMode } from '../manage-session';
 import { DEFAULT_ICON_ID } from '../lucide-icons';
-import { isValidCalloutId, slugifyCalloutId } from '../util/callout-id';
 import { makeCalloutRow } from '&ui/component/callout-row';
 import { renderIconColorAdjustSection } from '&ui/component/icon-color-adjust-section';
 
@@ -18,38 +17,20 @@ import { renderIconColorAdjustSection } from '&ui/component/icon-color-adjust-se
 export class ManageCalloutsPane extends UIPane {
 	public readonly title = { title: 'Callouts', subtitle: 'Manage' };
 	private readonly plugin: CalloutStore;
+	private readonly session: ManageSession;
 
-	private searchQuery: string;
-	private allCallouts: Callout[];
-	private filteredCallouts: Callout[];
-	private isCreating = false;
-	private sortMode: 'name' | 'color' | 'icon' = 'name';
 	private listEl: HTMLElement | null = null;
 
 	public constructor(plugin: CalloutStore) {
 		super();
 		this.plugin = plugin;
-		this.searchQuery = '';
-		this.allCallouts = [];
-		this.filteredCallouts = [];
+		this.session = new ManageSession(plugin);
 	}
 
 	/** Re-reads the callouts and rebuilds the list (not the slider section). */
 	private refresh(): void {
-		this.reload();
+		this.session.reload();
 		this.renderList();
-	}
-
-	private reload(): void {
-		this.allCallouts = this.plugin.getCallouts();
-		this.applyFilter();
-	}
-
-	private applyFilter(): void {
-		this.filteredCallouts = filterAndSortCallouts(this.allCallouts, this.searchQuery, {
-			aliasGroups: this.plugin.getAliasGroups(),
-			sortMode: this.sortMode,
-		});
 	}
 
 	/** @override */
@@ -73,18 +54,18 @@ export class ManageCalloutsPane extends UIPane {
 
 		listEl.empty();
 
-		if (!this.isCreating && this.filteredCallouts.length === 0) {
+		if (!this.session.isCreating && this.session.visible.length === 0) {
 			listEl
 				.createDiv({ cls: 'calloutmanager-centerbox' })
 				.createEl('p', { text: 'No callouts found.', cls: 'calloutmanager-search-empty' });
 		} else {
 			const itemsEl = listEl.createDiv('setting-group').createDiv('setting-items');
 
-			if (this.isCreating) {
+			if (this.session.isCreating) {
 				this.renderCreateRow(itemsEl);
 			}
 
-			for (const callout of this.filteredCallouts) {
+			for (const callout of this.session.visible) {
 				this.renderCalloutRow(itemsEl, callout);
 			}
 		}
@@ -107,31 +88,19 @@ export class ManageCalloutsPane extends UIPane {
 			});
 
 			const doCreate = () => {
-				const id = slugifyCalloutId(nameInput.value);
-				if (!id) {
-					nameInput.focus();
+				const result = this.session.create(nameInput.value);
+				if (result.ok) {
+					this.renderList();
 					return;
 				}
-				if (!isValidCalloutId(id)) {
-					new Notice(`Invalid callout id: '${id}'. Ids must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens.`);
-					nameInput.focus();
-					return;
-				}
-				// The repository accepts a duplicate create silently, so this is the only check.
-				if (this.plugin.hasCallout(id)) {
-					new Notice(`Callout '${id}' already exists.`);
-					nameInput.focus();
-					return;
-				}
-				this.isCreating = false;
-				this.plugin.createCustomCallout(id);
-				this.refresh();
+				if (result.message) new Notice(result.message);
+				nameInput.focus();
 			};
 
 			nameInput.addEventListener('keydown', (e) => {
 				if (e.key === 'Enter') doCreate();
 				if (e.key === 'Escape') {
-					this.isCreating = false;
+					this.session.cancelCreating();
 					this.renderList();
 				}
 			});
@@ -149,7 +118,7 @@ export class ManageCalloutsPane extends UIPane {
 					.setIcon('lucide-x')
 					.setTooltip('Cancel')
 					.onClick(() => {
-						this.isCreating = false;
+						this.session.cancelCreating();
 						this.renderList();
 					}),
 			);
@@ -159,15 +128,7 @@ export class ManageCalloutsPane extends UIPane {
 	}
 
 	private renderCalloutRow(containerEl: HTMLElement, callout: Callout): void {
-		makeCalloutRow(callout, this.plugin, {
-			refresh: () => this.refresh(),
-			// Search matches alias text (see applyFilter), so with a query active an alias edit can
-			// change which rows are visible — only a full refresh resolves that. Without a query a
-			// row's own re-render is enough and avoids rebuilding every row.
-			onAliasesChanged: () => {
-				if (this.searchQuery.trim().length > 0) this.refresh();
-			},
-		}).render(containerEl);
+		makeCalloutRow(this.session.rowFor(callout), { refresh: () => this.refresh() }).render(containerEl);
 	}
 
 	/** @override */
@@ -175,30 +136,27 @@ export class ManageCalloutsPane extends UIPane {
 		const { controlsEl } = this;
 
 		new TextComponent(controlsEl)
-			.setValue(this.searchQuery)
+			.setValue(this.session.searchQuery)
 			.setPlaceholder('Filter callouts…')
 			.onChange((q) => {
-				this.searchQuery = q;
-				this.applyFilter();
+				this.session.setQuery(q);
 				this.renderList();
 			});
 
-		const sortCycle: Array<{ mode: 'name' | 'color' | 'icon'; icon: string; tooltip: string }> = [
+		const sortCycle: Array<{ mode: SortMode; icon: string; tooltip: string }> = [
 			{ mode: 'name',  icon: 'lucide-list',    tooltip: 'Sort: by name' },
 			{ mode: 'color', icon: 'lucide-palette', tooltip: 'Sort: by color' },
 			{ mode: 'icon',  icon: 'lucide-image',   tooltip: 'Sort: by icon' },
 		];
 		let sortBtn: ButtonComponent;
-		const getSortEntry = () => sortCycle.find((s) => s.mode === this.sortMode)!;
+		const getSortEntry = () => sortCycle.find((s) => s.mode === this.session.sortMode)!;
 		new ButtonComponent(controlsEl)
 			.setIcon(getSortEntry().icon)
 			.setTooltip(getSortEntry().tooltip)
 			.onClick(() => {
-				const idx = sortCycle.findIndex((s) => s.mode === this.sortMode);
-				this.sortMode = sortCycle[(idx + 1) % sortCycle.length].mode;
+				this.session.cycleSort();
 				sortBtn.setIcon(getSortEntry().icon);
 				sortBtn.setTooltip(getSortEntry().tooltip);
-				this.applyFilter();
 				this.renderList();
 			})
 			.then((btn) => {
@@ -210,7 +168,7 @@ export class ManageCalloutsPane extends UIPane {
 			.setIcon('lucide-plus')
 			.setTooltip('New callout')
 			.onClick(() => {
-				this.isCreating = true;
+				this.session.startCreating();
 				this.renderList();
 			})
 			.then(({ buttonEl }) => buttonEl.classList.add('clickable-icon'));
@@ -218,7 +176,7 @@ export class ManageCalloutsPane extends UIPane {
 
 	/** @override */
 	protected onReady(): void {
-		this.reload();
+		this.session.reload();
 	}
 }
 

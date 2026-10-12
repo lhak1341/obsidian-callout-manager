@@ -12,6 +12,12 @@ export interface CalloutReader {
 	getCalloutSettings(id: CalloutID): CalloutSettings | undefined;
 }
 
+/** Tells consumers once per change to callouts or their styles; they re-read via {@link CalloutReader}. */
+export interface CalloutChangeSource {
+	/** @returns A function that removes the listener. */
+	subscribe(listener: () => void): () => void;
+}
+
 export interface AliasReader {
 	getAliasGroups(): Record<string, string[]>;
 }

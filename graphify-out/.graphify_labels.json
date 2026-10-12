@@ -193,5 +193,7 @@
   "191": "Manual install: download main.js/styles.css/manifest.json into vault plugins dir",
   "192": "MIT License, © 2023 eth-p",
   "193": "Screenshot: docs/images/screenshot_manage_pane_darklight.png",
-  "194": "What changed from upstream: removed manage-plugin pane/CSS export/reset-to-defaults in favor of one denser pane"
+  "194": "What changed from upstream: removed manage-plugin pane/CSS export/reset-to-defaults in favor of one denser pane",
+  "195": "ManageSession",
+  "196": "ManageCalloutsPane"
 }

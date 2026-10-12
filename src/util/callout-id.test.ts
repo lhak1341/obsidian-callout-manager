@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { isValidCalloutId, slugifyCalloutId } from './callout-id';
+import { isValidCalloutId, normalizeCalloutId, slugifyCalloutId } from './callout-id';
 
 describe('isValidCalloutId', () => {
 	test('accepts lowercase letters, digits, and hyphens starting with a letter', () => {
@@ -43,5 +43,24 @@ describe('slugifyCalloutId', () => {
 
 	test('does not strip punctuation other than whitespace', () => {
 		expect(slugifyCalloutId('note!')).toBe('note!');
+	});
+});
+
+describe('normalizeCalloutId', () => {
+	test('slugifies a valid name', () => {
+		expect(normalizeCalloutId('  My Callout ')).toEqual({ ok: true, id: 'my-callout' });
+	});
+
+	test('reports blank input as empty with no message', () => {
+		expect(normalizeCalloutId('   ')).toEqual({ ok: false, reason: 'empty', message: '' });
+	});
+
+	test('reports an invalid shape with the assert message', () => {
+		const result = normalizeCalloutId('2fast');
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.reason).toBe('invalid');
+			expect(result.message).toContain("Invalid callout id: '2fast'");
+		}
 	});
 });

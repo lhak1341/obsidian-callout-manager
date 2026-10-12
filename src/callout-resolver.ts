@@ -5,9 +5,6 @@ import { CalloutID } from '&callout';
 import { IsolatedCalloutPreviewComponent } from '&ui/component/callout-preview';
 import { App } from 'obsidian';
 
-/** `data-callout-manager` value marking the plugin's own override `<style>` element. */
-export const STYLE_OVERRIDES_ID = 'style-overrides';
-
 /**
  * A class that fetches style information for callouts.
  * This keeps a Shadow DOM within the page document and uses getComputedStyles to get CSS variables.
@@ -16,9 +13,15 @@ export class CalloutResolver {
 	private readonly obsidianApp: App;
 	private readonly hostElement: HTMLElement;
 	private readonly calloutPreview: IsolatedCalloutPreviewComponent;
+	private readonly isOwnOverrideStyle: (el: HTMLStyleElement) => boolean;
 
-	public constructor(app: App) {
+	/**
+	 * @param isOwnOverrideStyle Matches the plugin's own override `<style>` among the copied
+	 *   document styles, so `reloadStyles()` can strip it (the caller seeds it via `setCustomStyles`).
+	 */
+	public constructor(app: App, isOwnOverrideStyle: (el: HTMLStyleElement) => boolean) {
 		this.obsidianApp = app;
+		this.isOwnOverrideStyle = isOwnOverrideStyle;
 		this.hostElement = activeDocument.body.createDiv({
 			cls: 'calloutmanager-callout-resolver',
 		});
@@ -44,7 +47,7 @@ export class CalloutResolver {
 	public reloadStyles(): void {
 		this.calloutPreview.setColorScheme(getCurrentColorScheme(this.obsidianApp));
 		this.calloutPreview.updateStyles();
-		this.calloutPreview.removeStyles((el) => el.getAttribute('data-callout-manager') === STYLE_OVERRIDES_ID);
+		this.calloutPreview.removeStyles(this.isOwnOverrideStyle);
 	}
 
 	/**

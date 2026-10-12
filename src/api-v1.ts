@@ -5,25 +5,23 @@ import { getColorFromCallout, getTitleFromCallout } from '&callout-util';
 import { Callout, CalloutManager } from '../api';
 import { CalloutManagerEvent, CalloutManagerEventListener } from '../api/events';
 import { CalloutReader } from './callout-store';
-import { destroy, emitter } from './api-common';
 
 export class CalloutManagerAPI_V1 implements CalloutManager<true> {
 	private readonly store: CalloutReader;
 	private readonly consumer: Plugin | undefined;
 
-	public readonly [emitter]: Events;
+	private readonly events: Events;
 
 	public constructor(store: CalloutReader, consumer: Plugin | undefined) {
 		this.store = store;
 		this.consumer = consumer;
-		this[emitter] = new Events();
-
+		this.events = new Events();
 	}
 
-	/**
-	 * Called to destroy an API handle bound to a consumer.
-	 */
-	public [destroy]() {}
+	/** Tells this handle's listeners that callouts or their styles changed. Called by the host only. */
+	public notifyChange(): void {
+		this.events.trigger('change');
+	}
 
 	/** @override */
 	public getCallouts(): Readonly<Callout>[] {
@@ -44,13 +42,13 @@ export class CalloutManagerAPI_V1 implements CalloutManager<true> {
 	/** @override */
 	public on<E extends CalloutManagerEvent>(event: E, listener: CalloutManagerEventListener<E>): void {
 		this.assertHasConsumer();
-		this[emitter].on(event, listener);
+		this.events.on(event, listener);
 	}
 
 	/** @override */
 	public off<E extends CalloutManagerEvent>(event: E, listener: CalloutManagerEventListener<E>): void {
 		this.assertHasConsumer();
-		this[emitter].off(event, listener);
+		this.events.off(event, listener);
 	}
 
 	private assertHasConsumer(): void {

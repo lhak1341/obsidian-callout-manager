@@ -2,6 +2,13 @@ import { addIcon, getIconIds } from 'obsidian';
 
 import lucideIconSvgsJson from './lucide-icon-svgs.json';
 import lucideIconTagsJson from './lucide-icon-tags.json';
+import {
+	DEFAULT_ICON_ID,
+	GAP_ICON_PREFIX,
+	NATIVE_ICON_PREFIX,
+	resolveIconId,
+	resolveIconIdOrDefault,
+} from './icon-id';
 
 // Full offline snapshot of Lucide's icon set (lucide-icons/lucide), refreshed
 // via `bun run sync:lucide` — bundled at build time so every Lucide icon is
@@ -14,20 +21,6 @@ const LUCIDE_ICON_SVGS: Readonly<Record<string, string>> = lucideIconSvgsJson;
 // search runs on. Applies uniformly regardless of native-vs-gap-filled
 // source, since it's keyed by bare icon name either way.
 const LUCIDE_ICON_TAGS: Readonly<Record<string, readonly string[]>> = lucideIconTagsJson;
-
-// Obsidian's getIcon()/setIcon() special-case ids starting with "lucide-" to
-// resolve only against its native, compiled-in Lucide set. addIcon()-registered
-// entries under that same prefix get enumerated by getIconIds() but silently
-// fail to resolve at render time (confirmed live in the sister
-// obsidian-icon-shortcodes plugin: identical SVG content registered as
-// "lucide-<id>" returned null from getIcon() while the same content under a
-// separate namespace resolved correctly). Gap-filler icons (real Lucide icons
-// not bundled with this Obsidian version) are therefore registered under a
-// dedicated prefix instead.
-const GAP_ICON_PREFIX = 'callout-manager-lucide-';
-
-// Obsidian's bundled Lucide icon ids carry a "lucide-" prefix.
-const NATIVE_ICON_PREFIX = 'lucide-';
 
 // Obsidian wraps addIcon()-registered content in its own
 // <svg viewBox="0 0 100 100" class="svg-icon ..."> template. Lucide's raw
@@ -96,23 +89,14 @@ export function getLucideIconTags(name: string): readonly string[] {
 }
 
 /**
- * Resolves a stored icon id (bare, e.g. "flame", or "lucide-"-prefixed, e.g.
- * "lucide-flame" — this repo's storage carries both forms) to an id that
- * `getIcon()`/`setIcon()` will actually resolve: the native "lucide-" id if
- * Obsidian bundles it, the gap-filled custom id if not, or the original id
- * unchanged if it's not a known Lucide icon at all (defensive — an
- * unresolvable/typo'd id behaves exactly as it does today, no regression).
+ * Resolves a stored icon id to one `getIcon()`/`setIcon()` will actually resolve, against the
+ * icons {@link registerLucideIcons} found. Rules and examples: {@link resolveIconId}.
  */
 export function resolveLucideIconId(storedId: string): string {
-	const bareName = storedId.startsWith(NATIVE_ICON_PREFIX) ? storedId.slice(NATIVE_ICON_PREFIX.length) : storedId;
-
-	if (nativeNames.has(bareName)) return NATIVE_ICON_PREFIX + bareName;
-	if (gapNames.has(bareName)) return GAP_ICON_PREFIX + bareName;
-	return storedId;
+	return resolveIconId(storedId, { native: nativeNames, gap: gapNames });
 }
 
-/** Placeholder icon shown wherever a callout has no icon set yet (e.g. a still-unconfigured row). */
-export const DEFAULT_ICON_ID = 'lucide-pencil';
+export { DEFAULT_ICON_ID };
 
 /**
  * `resolveLucideIconId`, but falls back to {@link DEFAULT_ICON_ID} first if `id` is empty/undefined.
@@ -122,5 +106,5 @@ export const DEFAULT_ICON_ID = 'lucide-pencil';
  * through unresolved. Use the bare {@link DEFAULT_ICON_ID} constant for those instead.
  */
 export function iconIdForRender(id: string | undefined): string {
-	return resolveLucideIconId(id || DEFAULT_ICON_ID);
+	return resolveIconIdOrDefault(id, { native: nativeNames, gap: gapNames });
 }

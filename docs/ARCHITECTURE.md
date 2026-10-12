@@ -24,9 +24,11 @@ non-native icons under the `callout-manager-lucide-` prefix, not `lucide-` — O
 native `lucide-` prefix. Icon ids are stored both bare (`"flame"`) and `lucide-`-prefixed
 (`"lucide-flame"`).
 
-The id-resolution rules (`DEFAULT_ICON_ID`, `resolveLucideIconId()`, `iconIdForRender()`,
-and which call sites are deliberately exempt from the fallback) are documented as JSDoc on
-those symbols in `src/lucide-icons.ts` — read there rather than here; the exemption
+The id-resolution rules (`resolveIconId()`, `resolveIconIdOrDefault()`, `DEFAULT_ICON_ID`) live in
+the obsidian-free `src/icon-id.ts` and are tested there; `src/lucide-icons.ts` only holds the
+registry state and exposes `resolveLucideIconId()`/`iconIdForRender()` over it. Which call sites
+are deliberately exempt from the empty-id fallback is JSDoc on `iconIdForRender()` — read there
+rather than here; the exemption
 rationale is also commented at each exempt call site (`icon-reinjection.ts`,
 `icon-suggest.ts`).
 
@@ -41,20 +43,21 @@ importing `obsidian` there breaks at least one of the two runners.
   `AliasStore` + `IconColorAdjustStore` + CRUD) and only `ManageCalloutsPane` needs all of
   it. Read-only consumers (`InsertCalloutModal`, `apis.ts`, `api-v1.ts`) should depend on the
   narrow interfaces directly.
+- Edit rules and draft state live in DOM-free sessions (`InsertSession`, `ManageSession`, `RowSession`; no `obsidian` import, tested under both runners). Handlers in the pane, row and modal only render and forward events — don't move validation or draft state back into them.
 - Style inputs fan out: settings, alias groups, icon-color adjust, and theme/snippet/color-scheme
   changes can each change any callout's resolved color or icon, since aliases inherit from their
   canonical via propagation CSS. Route every such change through `CalloutRepository`'s
   `invalidateAndNotify()` (user edits) or `environmentChanged()` (Obsidian-side changes) so the
   whole cache drops and consumers get one `change`; do not invalidate by id. `environmentChanged()`
-  also pins the order: the probe reloads before the CSS is re-seeded.
+  also pins the order: the style host reloads before the CSS is re-seeded.
 - `UIPane` (`src/ui/pane.ts`) hosts one pane at a time — no stack, nav, or suspend/restore
   (removed deliberately; see ADR-0001, Superseded). `ManageCalloutsPane` and `ChangelogPane`
   are the only subclasses.
 - Every `Callout` is user-created; there is no built-in/theme/snippet discovery.
-  `CalloutCollection` has no source-tracking and `Callout` has no `sources` field — removed
+  The repository has no source-tracking and `Callout` has no `sources` field — removed
   deliberately (ADR-0003). Reintroducing discovery was proposed and declined once already.
 - Reachability check for "is this still used": grep across `api-v1.ts`, `apis.ts`,
-  `api-common.ts`, `main.ts`, the other pane files, and `src/**/*.test.ts` — those are the
+  `main.ts`, the other pane files, and `src/**/*.test.ts` — those are the
   only roots, and the test grep catches orphaned test doubles.
 
 Non-obvious call-site-specific traps (why `applyStyles` must stay a closure, why

@@ -7,6 +7,20 @@ import { mock } from 'bun:test';
 const noop = () => {};
 const returnThis = function (this: unknown) { return this; };
 
+class StubEvents {
+	private handlers: Record<string, Array<(...args: unknown[]) => void>> = {};
+	on(name: string, callback: (...args: unknown[]) => void) {
+		(this.handlers[name] ??= []).push(callback);
+		return {};
+	}
+	off(name: string, callback: (...args: unknown[]) => void) {
+		this.handlers[name] = (this.handlers[name] ?? []).filter((c) => c !== callback);
+	}
+	trigger(name: string, ...args: unknown[]) {
+		for (const callback of [...(this.handlers[name] ?? [])]) callback(...args);
+	}
+}
+
 class StubComponent {
 	load = noop; unload = noop; addChild = noop; register = noop;
 	registerEvent = noop; registerDomEvent = noop;
@@ -36,7 +50,7 @@ mock.module('obsidian', () => ({
 	Plugin: class {},
 	PluginSettingTab: class {},
 	Component: StubComponent,
-	Events: class { on = noop; off = noop; trigger = noop; },
+	Events: StubEvents,
 	Setting: StubSetting,
 	ButtonComponent: StubButton,
 	ExtraButtonComponent: StubButton,

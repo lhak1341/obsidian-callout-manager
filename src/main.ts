@@ -1,5 +1,4 @@
 import { MarkdownView, Plugin, debounce } from 'obsidian';
-import { CustomStyleSheet, createCustomStyleSheet } from 'obsidian-extra';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
 
@@ -7,11 +6,11 @@ import type { CalloutManager } from '../api';
 
 import { CalloutManagerAPIs } from './apis';
 import { CalloutRepository } from './callout-repository';
-import { CalloutResolver, STYLE_OVERRIDES_ID } from './callout-resolver';
 import { currentCalloutEnvironment } from './callout-settings';
 import { IconReinjector } from './icon-reinjection';
 import { registerLucideIcons } from './lucide-icons';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
+import { ObsidianStyleHost } from './obsidian-style-host';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
 import Settings, { defaultSettings, migrateSettings } from './settings';
 
@@ -19,11 +18,7 @@ import Settings, { defaultSettings, migrateSettings } from './settings';
 export default class CalloutManagerPlugin extends Plugin {
 	public repository!: CalloutRepository;
 
-	private calloutResolver!: CalloutResolver;
-	private cssApplier!: CustomStyleSheet;
-	private api!: CalloutManagerAPIs;
-	private apiReadySignal!: () => void;
-	private apiReadyWait = new Promise((resolve, reject) => (this.apiReadySignal = resolve as () => void));
+	private readonly api = new CalloutManagerAPIs();
 
 	public settingTab!: UISettingTab;
 
@@ -36,29 +31,12 @@ export default class CalloutManagerPlugin extends Plugin {
 		// subset this Obsidian version bundles natively) before anything renders.
 		registerLucideIcons();
 
-		// Create the callout resolver.
-		// This needs to be created as early as possible to ensure the Obsidian stylesheet within the shadow DOM has loaded.
-		// We also register an event to ensure that it tracks any changes to the loaded styles.
-		this.calloutResolver = new CalloutResolver(this.app);
-		this.register(() => this.calloutResolver.unload());
-
-		// Create a plugin-managed style sheet.
-		//  -> This is used to apply the user's custom styles to callouts.
-		this.cssApplier = createCustomStyleSheet(this.app, this);
-		this.cssApplier.setAttribute('data-callout-manager', STYLE_OVERRIDES_ID);
-		this.register(this.cssApplier);
-
+		// The style host needs to be created as early as possible so the Obsidian stylesheet within
+		// its shadow DOM has loaded. The repository's environment-change events keep it in sync.
 		this.repository = new CalloutRepository(this.app, settings, {
-			probe: this.calloutResolver,
-			sink: {
-				setCss: (css) => {
-					this.cssApplier.css = css;
-					this.calloutResolver.setCustomStyles(css);
-				},
-			},
+			style: new ObsidianStyleHost(this.app, this),
 			environment: () => currentCalloutEnvironment(this.app),
 			save: (data) => this.saveData(data),
-			onChange: () => this.api.emitEventForCalloutChange(),
 		});
 
 		// Register a listener for whenever the CSS changes or layout changes (e.g. floating windows open).
@@ -101,9 +79,8 @@ export default class CalloutManagerPlugin extends Plugin {
 			},
 		});
 
-		// Signal to wake async functions waiting for the API to be ready.
-		this.api = new CalloutManagerAPIs(this.repository);
-		this.apiReadySignal();
+		// Wake async functions waiting for the API to be ready.
+		this.api.attach(this.repository);
 
 		// Defer UI elements that don't need to be ready before the workspace loads.
 		this.app.workspace.onLayoutReady(() => {
@@ -128,7 +105,6 @@ export default class CalloutManagerPlugin extends Plugin {
 		consumerPlugin: Plugin | undefined,
 		cleanupFunc: () => void,
 	): Promise<CalloutManager> {
-		await this.apiReadyWait;
 		return this.api.newHandle(version, consumerPlugin, cleanupFunc);
 	}
 

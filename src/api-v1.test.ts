@@ -1,5 +1,5 @@
-import { App } from 'obsidian';
-import { describe, expect, test } from '@jest/globals';
+import { App, Plugin } from 'obsidian';
+import { describe, expect, jest, test } from '@jest/globals';
 
 import { Callout } from '&callout';
 
@@ -41,5 +41,35 @@ describe('CalloutManagerAPI_V1 — CalloutReader-only dependency', () => {
 		const [returned] = api.getCallouts();
 		expect(Object.isFrozen(returned)).toBe(true);
 		expect(returned).not.toBe(note);
+	});
+});
+
+describe('CalloutManagerAPI_V1 events', () => {
+	const consumer = {} as Plugin;
+
+	test('notifyChange() reaches change listeners', () => {
+		const api = new CalloutManagerAPI_V1(makeReaderStub([note]), consumer);
+		const listener = jest.fn();
+		api.on('change', listener);
+
+		api.notifyChange();
+
+		expect(listener).toHaveBeenCalledTimes(1);
+	});
+
+	test('off() stops delivery', () => {
+		const api = new CalloutManagerAPI_V1(makeReaderStub([note]), consumer);
+		const listener = jest.fn();
+		api.on('change', listener);
+		api.off('change', listener);
+
+		api.notifyChange();
+
+		expect(listener).not.toHaveBeenCalled();
+	});
+
+	test('listening without a consumer plugin throws', () => {
+		const api = new CalloutManagerAPI_V1(makeReaderStub([note]), undefined);
+		expect(() => api.on('change', jest.fn())).toThrow('Cannot listen for events without an API consumer.');
 	});
 });

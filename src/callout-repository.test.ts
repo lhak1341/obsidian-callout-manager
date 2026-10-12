@@ -11,12 +11,11 @@ function makeRepository() {
 	const save = jest.fn();
 	const onChange = jest.fn();
 	const repository = new CalloutRepository({} as App, defaultSettings(), {
-		probe: { getCalloutProperties, reloadStyles },
-		sink: { setCss },
+		style: { getCalloutProperties, reloadStyles, setCss },
 		environment: () => ({ theme: '<default>', colorScheme: 'dark' }),
 		save,
-		onChange,
 	});
+	repository.subscribe(onChange);
 	return { repository, resolve: getCalloutProperties, reloadStyles, setCss, save, onChange, onCalloutChanged: onChange };
 }
 
@@ -82,6 +81,68 @@ describe('CalloutRepository.renameCustomCallout', () => {
 	});
 });
 
+describe('CalloutRepository resolving and caching', () => {
+	test('does not probe until callouts are read; hasCallout never probes', () => {
+		const { repository, resolve } = makeRepository();
+		repository.createCustomCallout('note');
+		expect(repository.hasCallout('note')).toBe(true);
+		expect(resolve).not.toHaveBeenCalled();
+	});
+
+	test('repeated reads resolve each callout once', () => {
+		const { repository, resolve } = makeRepository();
+		repository.createCustomCallout('note');
+		repository.createCustomCallout('warning');
+		repository.getCallouts();
+		repository.getCallouts();
+		expect(resolve).toHaveBeenCalledTimes(2);
+	});
+
+	test('an invalidation forces exactly one more resolve per callout', () => {
+		const { repository, resolve } = makeRepository();
+		repository.createCustomCallout('note');
+		repository.getCallouts();
+		repository.setAliasGroup('note', ['memo']);
+		repository.getCallouts();
+		repository.getCallouts();
+		expect(resolve).toHaveBeenCalledTimes(2);
+	});
+
+	test('getCallouts returns a copy, so callers cannot corrupt the cache', () => {
+		const { repository } = makeRepository();
+		repository.createCustomCallout('note');
+		repository.getCallouts().pop();
+		expect(repository.getCallouts().map((c) => c.id)).toEqual(['note']);
+	});
+
+	test('a renamed callout moves to the end of the list', () => {
+		const { repository } = makeRepository();
+		repository.createCustomCallout('a');
+		repository.createCustomCallout('b');
+		repository.renameCustomCallout('a', 'c');
+		expect(repository.getCallouts().map((c) => c.id)).toEqual(['b', 'c']);
+	});
+
+	test('duplicate ids in saved settings collapse to one callout', () => {
+		const settings = defaultSettings();
+		settings.callouts.custom = ['note', 'note'];
+		const repository = new CalloutRepository({} as App, settings, {
+			style: { getCalloutProperties: () => ({ color: '', icon: '' }), reloadStyles: jest.fn(), setCss: jest.fn() },
+			environment: () => ({ theme: '<default>', colorScheme: 'dark' }),
+			save: jest.fn(),
+		});
+		expect(repository.getCallouts().map((c) => c.id)).toEqual(['note']);
+	});
+
+	test('removing a callout drops it from the list', () => {
+		const { repository } = makeRepository();
+		repository.createCustomCallout('note');
+		repository.removeCustomCallout('note');
+		expect(repository.getCallouts()).toEqual([]);
+		expect(repository.hasCallout('note')).toBe(false);
+	});
+});
+
 describe('CalloutRepository cache invalidation', () => {
 	function seeded() {
 		const ctx = makeRepository();
@@ -127,7 +188,7 @@ describe('CalloutRepository cache invalidation', () => {
 });
 
 describe('CalloutRepository styles and environment', () => {
-	test('seeds the style sink on construction', () => {
+	test('seeds the style host on construction', () => {
 		const { setCss } = makeRepository();
 		expect(setCss).toHaveBeenCalledTimes(1);
 	});
@@ -141,7 +202,7 @@ describe('CalloutRepository styles and environment', () => {
 		expect(onChange).toHaveBeenCalledTimes(1);
 	});
 
-	test('environmentChanged reloads the probe before re-applying CSS, then invalidates and notifies', () => {
+	test('environmentChanged reloads the style host before re-applying CSS, then invalidates and notifies', () => {
 		const { repository, reloadStyles, setCss, resolve, onChange } = makeRepository();
 		repository.createCustomCallout('note');
 		repository.getCallouts();

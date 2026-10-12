@@ -1,60 +1,62 @@
 import { App } from 'obsidian';
 
 import type { Callout, CalloutID } from '../api';
-import { CalloutCollection } from './callout-collection';
 import { assembleStylesheet } from './assemble-stylesheet';
 import { CalloutEnvironment, CalloutSettings } from './callout-settings';
-import { CalloutStore, IconColorAdjust } from './callout-store';
+import { CalloutChangeSource, CalloutStore, IconColorAdjust } from './callout-store';
 import Settings from './settings';
 import { assertValidCalloutId } from './util/callout-id';
 
-/** Reads the live, CSS-resolved icon and color of a callout (Obsidian's shadow-DOM resolver in production). */
-export interface CalloutProbe {
+/**
+ * The app's styling as the repository sees it: it receives the assembled override stylesheet and
+ * reads back the live, CSS-resolved icon and color of a callout (the `<style>` tag plus Obsidian's
+ * shadow-DOM resolver in production, see `ObsidianStyleHost`).
+ */
+export interface StyleHost {
 	getCalloutProperties(id: CalloutID): { icon: string; color: string };
 	/** Re-reads the app's stylesheets and color scheme. Must run before {@link CalloutRepository} re-applies its CSS. */
 	reloadStyles(): void;
-}
-
-/** Receives the assembled override stylesheet (the plugin's `<style>` tag plus the probe's copy in production). */
-export interface StyleSink {
 	setCss(css: string): void;
 }
 
 export interface CalloutRepositoryAdapters {
-	probe: CalloutProbe;
-	sink: StyleSink;
+	style: StyleHost;
 	environment: () => CalloutEnvironment;
 	save: (data: Settings) => void;
-	/** Fires once per change to callouts or their styles; consumers re-read via `getCallouts()`. */
-	onChange: () => void;
 }
 
-export class CalloutRepository implements CalloutStore {
+export class CalloutRepository implements CalloutStore, CalloutChangeSource {
 	public readonly app: App;
 	private readonly settings: Settings;
-	private readonly callouts: CalloutCollection;
+	/** Resolved callouts in `settings.callouts.custom` order; `null` once any style input has changed. */
+	private snapshot: Callout[] | null = null;
 	private readonly adapters: CalloutRepositoryAdapters;
+	private readonly listeners: Set<() => void> = new Set();
 
 	public constructor(app: App, settings: Settings, adapters: CalloutRepositoryAdapters) {
 		this.app = app;
 		this.settings = settings;
 		this.adapters = adapters;
 
-		this.callouts = new CalloutCollection((id) => {
-			const { icon, color } = adapters.probe.getCalloutProperties(id);
-			return { id, icon, color };
-		});
-
-		this.callouts.add(...settings.callouts.custom);
+		settings.callouts.custom = [...new Set(settings.callouts.custom)];
 		this.applyStyles();
 	}
 
+	public subscribe(listener: () => void): () => void {
+		this.listeners.add(listener);
+		return () => this.listeners.delete(listener);
+	}
+
 	public getCallouts(): Callout[] {
-		return this.callouts.values();
+		this.snapshot ??= this.settings.callouts.custom.map((id) => {
+			const { icon, color } = this.adapters.style.getCalloutProperties(id);
+			return { id, icon, color };
+		});
+		return [...this.snapshot];
 	}
 
 	public hasCallout(id: CalloutID): boolean {
-		return this.callouts.has(id);
+		return this.settings.callouts.custom.includes(id);
 	}
 
 	public getAliasGroups(): Record<string, string[]> {
@@ -111,20 +113,18 @@ export class CalloutRepository implements CalloutStore {
 	public createCustomCallout(id: CalloutID): void {
 		assertValidCalloutId(id);
 
-		this.callouts.add(id);
-		this.settings.callouts.custom = this.callouts.keys();
+		if (!this.hasCallout(id)) this.settings.callouts.custom = [...this.settings.callouts.custom, id];
 		this.invalidateAndNotify();
 	}
 
 	public renameCustomCallout(oldId: CalloutID, newId: CalloutID): void {
 		assertValidCalloutId(newId);
 
-		if (!this.callouts.has(oldId)) throw new Error(`Callout '${oldId}' does not exist.`);
-		if (this.callouts.has(newId)) throw new Error(`Callout '${newId}' already exists.`);
+		if (!this.hasCallout(oldId)) throw new Error(`Callout '${oldId}' does not exist.`);
+		if (this.hasCallout(newId)) throw new Error(`Callout '${newId}' already exists.`);
 
-		this.callouts.delete(oldId);
-		this.callouts.add(newId);
-		this.settings.callouts.custom = this.callouts.keys();
+		// Moves to the end of the list; API consumers see this order.
+		this.settings.callouts.custom = [...this.settings.callouts.custom.filter((c) => c !== oldId), newId];
 		// Only move settings that exist: an `undefined` entry would make assembleStylesheet throw.
 		if (Object.prototype.hasOwnProperty.call(this.settings.callouts.settings, oldId)) {
 			this.settings.callouts.settings[newId] = this.settings.callouts.settings[oldId];
@@ -142,8 +142,7 @@ export class CalloutRepository implements CalloutStore {
 	}
 
 	public removeCustomCallout(id: CalloutID): void {
-		this.callouts.delete(id);
-		this.settings.callouts.custom = this.callouts.keys();
+		this.settings.callouts.custom = this.settings.callouts.custom.filter((c) => c !== id);
 		delete this.settings.callouts.settings[id];
 		delete this.settings.aliasGroups[id];
 
@@ -152,18 +151,18 @@ export class CalloutRepository implements CalloutStore {
 
 	/**
 	 * Call when anything outside the plugin's settings that feeds callout styles may have changed
-	 * (theme, snippets, color scheme, new windows). Order matters: the probe must reload before the
+	 * (theme, snippets, color scheme, new windows). Order matters: the style host must reload before the
 	 * stylesheet is re-seeded, and the cache must drop before consumers are notified.
 	 */
 	public environmentChanged(): void {
-		this.adapters.probe.reloadStyles();
+		this.adapters.style.reloadStyles();
 		this.applyStyles();
-		this.callouts.invalidateAll();
-		this.adapters.onChange();
+		this.snapshot = null;
+		this.notify();
 	}
 
 	private applyStyles(): void {
-		this.adapters.sink.setCss(
+		this.adapters.style.setCss(
 			assembleStylesheet(
 				this.settings.callouts.settings,
 				this.settings.aliasGroups,
@@ -176,9 +175,13 @@ export class CalloutRepository implements CalloutStore {
 	// Every style input (settings, aliases, icon-color adjust) can change any callout's resolved
 	// color/icon, e.g. aliases inherit from their canonical, so invalidate everything.
 	private invalidateAndNotify(): void {
-		this.callouts.invalidateAll();
+		this.snapshot = null;
 		this.save();
-		this.adapters.onChange();
+		this.notify();
+	}
+
+	private notify(): void {
+		for (const listener of [...this.listeners]) listener();
 	}
 
 	private save(): void {

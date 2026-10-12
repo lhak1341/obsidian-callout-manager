@@ -7,7 +7,7 @@ Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, th
 - Babel's `@babel/preset-typescript` silently fails to strip type args on
   `new Map<T,U>()` / `new Set<T>()` in **any initializer** (class field or top-level `let`),
   throwing `SyntaxError: Unexpected token ','` (or `')'`) at a wrong line number. Annotate the
-  binding instead: `let data: Map<K,V> = new Map();`. This is why `src/lucide-icons.ts:65`
+  binding instead: `let data: Map<K,V> = new Map();`. This is why `src/lucide-icons.ts` (its top-level `new Set<string>()` registries)
   cannot load under Jest (checked under Jest only, not `bun test`), so anything importing it is
   untestable there — keep testable logic in obsidian-free modules.
 - A top-level import used only in type position must be `import type`, or Babel throws
@@ -22,8 +22,7 @@ Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, th
   either runner. Extract testable logic out of it.
 - A class that only stores `App`/callbacks (never calls into them) needs no real mock: cast
   `{} as App`, pass `jest.fn()` spies for constructor callbacks, and build real settings via
-  `defaultSettings()` — see `callout-repository.test.ts`/`api-v1.test.ts`/
-  `callout-collection.test.ts`.
+  `defaultSettings()` — see `callout-repository.test.ts`/`api-v1.test.ts`.
 
 ## Live testing in the vault
 

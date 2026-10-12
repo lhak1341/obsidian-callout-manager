@@ -21,3 +21,22 @@ export function assertValidCalloutId(id: string): void {
 export function slugifyCalloutId(input: string): string {
 	return input.trim().toLowerCase().replace(/\s+/g, '-');
 }
+
+export type NormalizedCalloutId =
+	| { ok: true; id: string }
+	| { ok: false; reason: 'empty' | 'invalid'; message: string };
+
+/**
+ * Slugifies free-form input and checks the result. `empty` is distinct from `invalid` because
+ * an empty field is a no-op for the UI, not an error worth a message.
+ */
+export function normalizeCalloutId(input: string): NormalizedCalloutId {
+	const id = slugifyCalloutId(input);
+	if (!id) return { ok: false, reason: 'empty', message: '' };
+	try {
+		assertValidCalloutId(id);
+	} catch (error) {
+		return { ok: false, reason: 'invalid', message: error instanceof Error ? error.message : String(error) };
+	}
+	return { ok: true, id };
+}
