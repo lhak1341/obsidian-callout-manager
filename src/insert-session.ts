@@ -1,20 +1,9 @@
 import Callout from '&callout';
 
+import { type FoldState, type InsertionEdit, type Selection, planInsertion } from './callout-writer';
 import { filterAndSortCallouts } from './callout-search';
 
-export type FoldState = '' | '+' | '-';
-
-export interface Position {
-	line: number;
-	ch: number;
-}
-
-/** What to write into the editor, and where the cursor goes afterwards. */
-export interface Insertion {
-	text: string;
-	/** Cursor position after `text` has been written starting at the position given to `toInsertion`. */
-	cursor: Position;
-}
+export type { FoldState } from './callout-writer';
 
 export interface InsertSessionOptions {
 	/** Alias groups keyed by canonical callout id; alias text is searchable when given. */
@@ -95,23 +84,13 @@ export class InsertSession {
 	}
 
 	/**
-	 * Builds the markdown to write at `start` (the start of the editor selection, or the cursor).
-	 * A callout must begin a line, so mid-line starts get a leading newline.
+	 * Builds the editor edit that inserts the callout over `selection` in the document `lines`.
+	 * Where it goes and what surrounds it is decided by {@link planInsertion}.
 	 */
-	public toInsertion(start: Position): Insertion | null {
+	public toInsertion(lines: readonly string[], selection: Selection): InsertionEdit | null {
 		const callout = this._selected;
 		if (!callout) return null;
-
-		const title = this.title.trim() || '%% %%';
-		const rawContent = this.content.trim();
-		const body = rawContent ? rawContent.replace(/\n/g, '\n> ') : ' ';
-
-		const text = `${start.ch > 0 ? '\n' : ''}> [!${callout.id}]${this.fold} ${title}\n> ${body}`;
-		const lines = text.split('\n');
-		return {
-			text,
-			cursor: { line: start.line + lines.length - 1, ch: lines[lines.length - 1].length },
-		};
+		return planInsertion(lines, selection, { id: callout.id, fold: this.fold, title: this.title, body: this.content });
 	}
 
 	private applyFilter(): Callout[] {

@@ -23,8 +23,16 @@ This is a personal fork of [eth-p/obsidian-callout-manager](https://github.com/e
 - **Create and manage custom callouts.**
   Add, rename, and delete your own callout IDs from the same list.
 
-- **Insert Callout command.**
-  A command (and ribbon icon) that opens a searchable modal for inserting a callout at the cursor.
+- **Insert, wrap and unwrap.**
+  *Insert callout* (command and ribbon icon) opens a searchable modal; *Wrap in callout* wraps the
+  selected lines or the paragraph under the cursor; *Unwrap callout* removes one layer. Nested
+  quotes, lists and note properties are handled, and the callout never touches the text around it.
+
+- **`[!` autocomplete.**
+  Typing `> [!` offers your callouts (and "Create …" for an unknown id).
+
+- **Right-click menu.**
+  Inside a callout: copy its Markdown, change its fold state, unwrap it, or jump to its style.
 
 - **Plugin API.**
   Other plugins can query the callout list through a versioned API — see [api/README.md](./api/README.md). Note: this fork isn't published to npm, so consumers need to vendor or reference this repo directly rather than `npm install obsidian-callout-manager`.

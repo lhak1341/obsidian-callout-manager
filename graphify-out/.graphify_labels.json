@@ -195,5 +195,7 @@
   "193": "Screenshot: docs/images/screenshot_manage_pane_darklight.png",
   "194": "What changed from upstream: removed manage-plugin pane/CSS export/reset-to-defaults in favor of one denser pane",
   "195": "ManageSession",
-  "196": "ManageCalloutsPane"
+  "196": "ManageCalloutsPane",
+  "197": "InsertCalloutModal",
+  "198": "color.ts"
 }

@@ -6,7 +6,7 @@ Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, th
 
 - Babel's `@babel/preset-typescript` silently fails to strip type args on
   `new Map<T,U>()` / `new Set<T>()` in **any initializer** (class field or top-level `let`),
-  throwing `SyntaxError: Unexpected token ','` (or `')'`) at a wrong line number. Annotate the
+  throwing `SyntaxError: Unexpected token ','` (or `')'`) at a wrong line number. Same for `jest.fn<T>()` in a test (`Malformed arrow function parameter list`): leave it untyped. Annotate the
   binding instead: `let data: Map<K,V> = new Map();`. This is why `src/lucide-icons.ts` (its top-level `new Set<string>()` registries)
   cannot load under Jest (checked under Jest only, not `bun test`), so anything importing it is
   untestable there — keep testable logic in obsidian-free modules.
@@ -44,3 +44,10 @@ Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, th
   `app.workspace.getLeavesOfType('markdown').find(l => l.view.containerEl.querySelector('.callout'))`.
 - Scheme-gated settings (e.g. `iconColorAdjust`) silently no-op against the wrong scheme —
   check `document.body.classList.contains('theme-dark')`.
+- `temp/` (gitignored, holds a third-party plugin copy) breaks `bun run typecheck` (errors all
+  under `temp/`; read only the lines not starting with `temp/`) and bare `jest` (runs its
+  suites). Run `./node_modules/.bin/jest src` and `bun test src`.
+- `require('obsidian')` fails inside `obsidian eval`. To check what an `editor-menu` handler adds,
+  pass `app.workspace.trigger('editor-menu', fakeMenu, editor, view)` a stand-in with
+  `addItem(cb)` (cb gets `{setTitle, setIcon, setSection, onClick}`) and `addSeparator()`;
+  it only reads the note.

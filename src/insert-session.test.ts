@@ -13,7 +13,9 @@ function makeSession(options: ConstructorParameters<typeof InsertSession>[1] = {
 	return new InsertSession(callouts, options);
 }
 
-const START = { line: 3, ch: 0 };
+const DOC = ['', '', '', ''];
+const at = (line: number, ch: number) => ({ from: { line, ch }, to: { line, ch } });
+const START = at(3, 0);
 
 describe('InsertSession selection and filtering', () => {
 	test('starts with all callouts in id order and the first one selected', () => {
@@ -65,7 +67,7 @@ describe('InsertSession selection and filtering', () => {
 	test('has no selection and no insertion for an empty callout list', () => {
 		const session = new InsertSession([], {});
 		expect(session.selected).toBeNull();
-		expect(session.toInsertion(START)).toBeNull();
+		expect(session.toInsertion(DOC, START)).toBeNull();
 		expect(session.preview()).toBeNull();
 	});
 });
@@ -74,7 +76,7 @@ describe('InsertSession.toInsertion', () => {
 	test('blank title becomes the hidden-title comment, blank body a single space', () => {
 		const session = makeSession();
 		session.select('note');
-		expect(session.toInsertion(START)?.text).toBe('> [!note] %% %%\n>  ');
+		expect(session.toInsertion(DOC, START)?.text).toBe('> [!note] %% %%\n>  ');
 	});
 
 	test('uses a trimmed custom title and a trimmed body', () => {
@@ -82,14 +84,14 @@ describe('InsertSession.toInsertion', () => {
 		session.select('note');
 		session.setTitle('  Heads up ');
 		session.setContent('  hello  ');
-		expect(session.toInsertion(START)?.text).toBe('> [!note] Heads up\n> hello');
+		expect(session.toInsertion(DOC, START)?.text).toBe('> [!note] Heads up\n> hello');
 	});
 
 	test('prefixes every body line with the quote marker', () => {
 		const session = makeSession();
 		session.select('note');
 		session.setContent('one\n\nthree');
-		expect(session.toInsertion(START)?.text).toBe('> [!note] %% %%\n> one\n> \n> three');
+		expect(session.toInsertion(DOC, START)?.text).toBe('> [!note] %% %%\n> one\n> \n> three');
 	});
 
 	test.each([
@@ -102,15 +104,27 @@ describe('InsertSession.toInsertion', () => {
 		session.setFold(fold);
 		session.setTitle('T');
 		session.setContent('b');
-		expect(session.toInsertion(START)?.text).toBe(expected);
+		expect(session.toInsertion(DOC, START)?.text).toBe(expected);
 	});
 
-	test('prepends a newline when the insertion starts mid-line', () => {
+	test('starts below the text before the cursor, separated by a blank line', () => {
 		const session = makeSession();
 		session.select('note');
 		session.setTitle('T');
 		session.setContent('b');
-		expect(session.toInsertion({ line: 3, ch: 5 })?.text).toBe('\n> [!note] T\n> b');
+		expect(session.toInsertion(['', '', '', 'abcde'], at(3, 5))?.text).toBe('\n\n> [!note] T\n> b');
+	});
+
+	test('replaces the selection and keeps the rest of its line outside the callout', () => {
+		const session = makeSession({ initialContent: 'cd' });
+		session.select('note');
+		const edit = session.toInsertion(['abcdef'], { from: { line: 0, ch: 2 }, to: { line: 0, ch: 4 } });
+		expect(edit).toEqual({
+			from: { line: 0, ch: 2 },
+			to: { line: 0, ch: 6 },
+			text: '\n\n> [!note] %% %%\n> cd\n\nef',
+			cursor: { line: 3, ch: '> cd'.length },
+		});
 	});
 
 	test('cursor lands at the end of the last inserted line (column start)', () => {
@@ -118,15 +132,15 @@ describe('InsertSession.toInsertion', () => {
 		session.select('note');
 		session.setTitle('T');
 		session.setContent('abc\nde');
-		expect(session.toInsertion(START)?.cursor).toEqual({ line: 5, ch: '> de'.length });
+		expect(session.toInsertion(DOC, START)?.cursor).toEqual({ line: 5, ch: '> de'.length });
 	});
 
-	test('cursor accounts for the extra leading newline', () => {
+	test('cursor accounts for the separator lines above the callout', () => {
 		const session = makeSession();
 		session.select('note');
 		session.setTitle('T');
 		session.setContent('b');
-		expect(session.toInsertion({ line: 3, ch: 5 })?.cursor).toEqual({ line: 5, ch: '> b'.length });
+		expect(session.toInsertion(['', '', '', 'abcde'], at(3, 5))?.cursor).toEqual({ line: 6, ch: '> b'.length });
 	});
 });
 
@@ -134,7 +148,7 @@ describe('InsertSession initial content and preview', () => {
 	test('pre-fills content from the initial selection', () => {
 		const session = makeSession({ initialContent: 'selected text' });
 		session.select('note');
-		expect(session.toInsertion(START)?.text).toBe('> [!note] %% %%\n> selected text');
+		expect(session.toInsertion(DOC, START)?.text).toBe('> [!note] %% %%\n> selected text');
 	});
 
 	test('preview of a blank title is empty, matching what the inserted markdown renders', () => {

@@ -1,4 +1,4 @@
-import { MarkdownView, Plugin, debounce } from 'obsidian';
+import { MarkdownView, Notice, Plugin, debounce } from 'obsidian';
 
 import { UISettingTab } from '&ui/paned-setting-tab';
 
@@ -7,12 +7,14 @@ import type { CalloutManager } from '../api';
 import { CalloutManagerAPIs } from './apis';
 import { CalloutRepository } from './callout-repository';
 import { currentCalloutEnvironment } from './callout-settings';
+import { registerEditorFeatures } from './editor-features';
 import { IconReinjector } from './icon-reinjection';
 import { registerLucideIcons } from './lucide-icons';
 import { InsertCalloutModal } from './panes/insert-callout-modal';
 import { ObsidianStyleHost } from './obsidian-style-host';
 import { ManageCalloutsPane } from './panes/manage-callouts-pane';
-import Settings, { defaultSettings, migrateSettings } from './settings';
+import { SaveReporter } from './save-reporter';
+import { auxiliaryFiles, resolveStartup } from './startup-settings';
 
 
 export default class CalloutManagerPlugin extends Plugin {
@@ -20,12 +22,16 @@ export default class CalloutManagerPlugin extends Plugin {
 
 	private readonly api = new CalloutManagerAPIs();
 
+	private readonly saveReporter = new SaveReporter(
+		(message) => new Notice(message),
+		(error) => console.error('Callout Manager: saving settings failed', error),
+	);
+
 	public settingTab!: UISettingTab;
 
 	/** @override */
 	public async onload() {
-		const settings: Settings = migrateSettings(defaultSettings(), await this.loadData());
-		await this.saveData(settings);
+		const settings = await this.loadSettings();
 
 		// Register the full offline Lucide icon set (gap-filled against whatever
 		// subset this Obsidian version bundles natively) before anything renders.
@@ -36,7 +42,7 @@ export default class CalloutManagerPlugin extends Plugin {
 		this.repository = new CalloutRepository(this.app, settings, {
 			style: new ObsidianStyleHost(this.app, this),
 			environment: () => currentCalloutEnvironment(this.app),
-			save: (data) => this.saveData(data),
+			save: (data) => this.saveReporter.run(() => this.saveData(data)),
 		});
 
 		// Register a listener for whenever the CSS changes or layout changes (e.g. floating windows open).
@@ -79,6 +85,8 @@ export default class CalloutManagerPlugin extends Plugin {
 			},
 		});
 
+		registerEditorFeatures({ plugin: this, store: this.repository, settingTab: this.settingTab });
+
 		// Wake async functions waiting for the API to be ready.
 		this.api.attach(this.repository);
 
@@ -89,6 +97,51 @@ export default class CalloutManagerPlugin extends Plugin {
 				new InsertCalloutModal(this.repository, editor).open();
 			});
 		});
+	}
+
+	/**
+	 * Reads `data.json` and decides what to start with (see `resolveStartup`). Never rewrites a file
+	 * it could not read: a missing file falls back to the last known-good copy, and a file that
+	 * lost invalid entries is kept whole in `data.quarantine.json` before anything is saved.
+	 */
+	private async loadSettings() {
+		const dir = this.manifest.dir;
+		const adapter = this.app.vault.adapter;
+		const backupPath = dir ? `${dir}/data.backup.json` : null;
+		const quarantinePath = dir ? `${dir}/data.quarantine.json` : null;
+
+		const raw: unknown = await this.loadData();
+		const backupText = backupPath && (await adapter.exists(backupPath)) ? await adapter.read(backupPath) : null;
+
+		let backup: unknown = null;
+		try {
+			backup = backupText === null ? null : JSON.parse(backupText);
+		} catch {
+			// An unreadable backup is no backup.
+		}
+
+		const startup = resolveStartup(raw, backup);
+
+		// The side files are a safety net; failing to write one must not stop the plugin loading.
+		try {
+			const files = auxiliaryFiles(startup, raw, backupText);
+			if (files.quarantine !== undefined && quarantinePath) await adapter.write(quarantinePath, files.quarantine);
+			if (files.backup !== undefined && backupPath) await adapter.write(backupPath, files.backup);
+		} catch (error) {
+			console.error('Callout Manager: writing a settings backup failed', error);
+		}
+
+		if (startup.source === 'backup') {
+			new Notice('The settings file was missing; restored the last known-good copy.');
+		}
+		if (startup.dropped.length > 0) {
+			new Notice(
+				`Callout Manager: ${startup.dropped.length} invalid settings entries were dropped. The original is in data.quarantine.json.`,
+			);
+		}
+
+		if (startup.save) this.saveReporter.run(() => this.saveData(startup.settings));
+		return startup.settings;
 	}
 
 	/**

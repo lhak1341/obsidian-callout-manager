@@ -55,7 +55,7 @@
     "semantic_hash": "02412869e7fd33261e8003356d339130"
   },
   "manifest.json": {
-    "mtime": 1791768751.4261785,
+    "mtime": 1792088605.688561,
     "ast_hash": "ca1032da7c2e5563c09b8429d61544a7",
     "semantic_hash": ""
   },
@@ -135,8 +135,8 @@
     "semantic_hash": "52d6cb33ed78605c2b015d569d69e430"
   },
   "src/main.ts": {
-    "mtime": 1791768089.6919549,
-    "ast_hash": "1fec663734c9230d70414aee3b1a4ecb",
+    "mtime": 1792088403.7517297,
+    "ast_hash": "5a48d0fc8efe6b904a1269ceefda6e23",
     "semantic_hash": ""
   },
   "src/panes/changelog-pane.ts": {
@@ -145,18 +145,18 @@
     "semantic_hash": "4afbceb918cd4808c6f3122ddaf028b6"
   },
   "src/panes/insert-callout-modal.ts": {
-    "mtime": 1791645441.8729024,
-    "ast_hash": "e64b0bca5ac3e80a06c9648816e9fba0",
+    "mtime": 1792088403.75139,
+    "ast_hash": "9793bfa589e3f638508fc37c979275ae",
     "semantic_hash": ""
   },
   "src/panes/manage-callouts-pane.ts": {
-    "mtime": 1791767054.1004133,
-    "ast_hash": "9294b9f4f87889ebf7d664511702f172",
+    "mtime": 1792088403.7509549,
+    "ast_hash": "24e071547f9266c17ababb13e2d1e4d5",
     "semantic_hash": ""
   },
   "src/settings.ts": {
-    "mtime": 1791642073.1859932,
-    "ast_hash": "bc4ce0004cc042bd007ce829355011c6",
+    "mtime": 1792082792.7336602,
+    "ast_hash": "b74d3a54b8f11d3b01ae8f40c65f2e88",
     "semantic_hash": ""
   },
   "src/ui/component/callout-preview.ts": {
@@ -220,7 +220,7 @@
     "semantic_hash": "a2421e71781eeef10816c9be39010244"
   },
   "versions.json": {
-    "mtime": 1791768751.4262342,
+    "mtime": 1792088605.6886199,
     "ast_hash": "7a53ad9359d0a28455c474d1ea9607b9",
     "semantic_hash": ""
   },
@@ -235,9 +235,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1786039881.5828044,
-    "ast_hash": "8a7332a22481d030bfb295c90447308e",
-    "semantic_hash": "8a7332a22481d030bfb295c90447308e"
+    "mtime": 1792088457.8171563,
+    "ast_hash": "910080279cd9eccbf96d7d837f76c5b7",
+    "semantic_hash": ""
   },
   "api/README.md": {
     "mtime": 1786039898.9724317,
@@ -275,9 +275,9 @@
     "semantic_hash": "e4e50055d40bb85ef6117370cee67496"
   },
   "src/icon-search.ts": {
-    "mtime": 1786637901.6675096,
-    "ast_hash": "3a34fcf59b7548e21556af1f0df84a0d",
-    "semantic_hash": "3a34fcf59b7548e21556af1f0df84a0d"
+    "mtime": 1792087291.7115064,
+    "ast_hash": "429698d3ec30c5e957a5df3cba844b25",
+    "semantic_hash": ""
   },
   "src/lucide-icon-svgs.json": {
     "mtime": 1787146004.6733773,
@@ -310,18 +310,18 @@
     "semantic_hash": ""
   },
   "docs/ARCHITECTURE.md": {
-    "mtime": 1791768965.2881455,
-    "ast_hash": "926deeb0bbc37dec48cc94c5efa4b960",
+    "mtime": 1792088457.8163786,
+    "ast_hash": "6c45510a173c37ce56a3dcca93e749fe",
     "semantic_hash": ""
   },
   "docs/TESTING.md": {
-    "mtime": 1791768965.2879875,
-    "ast_hash": "b9d82758c54335f4d70054db877d3b49",
+    "mtime": 1792114582.043829,
+    "ast_hash": "8c7e3c6b68f92963afe9102b0b52953c",
     "semantic_hash": ""
   },
   "src/insert-session.ts": {
-    "mtime": 1791643031.3428595,
-    "ast_hash": "c7aefafd3f42ede2e369169cb65c7795",
+    "mtime": 1792087665.4259424,
+    "ast_hash": "d7c884c843bd5ed33b2f746d59617016",
     "semantic_hash": ""
   },
   "src/ui/component/callout-glyph.ts": {
@@ -352,6 +352,41 @@
   "src/row-session.ts": {
     "mtime": 1791767107.8728082,
     "ast_hash": "ccc6e9024e1c370f59fa29cccc847a14",
+    "semantic_hash": ""
+  },
+  "src/callout-block.ts": {
+    "mtime": 1792088226.314096,
+    "ast_hash": "77e78509f76929fb11f07bf15b356c61",
+    "semantic_hash": ""
+  },
+  "src/callout-trigger.ts": {
+    "mtime": 1792088341.7757008,
+    "ast_hash": "05842ff500fd918519efa76d5b3f2b74",
+    "semantic_hash": ""
+  },
+  "src/callout-writer.ts": {
+    "mtime": 1792088126.5910692,
+    "ast_hash": "f20fab4a7b609b4ecd0e87ccfe5cf4a2",
+    "semantic_hash": ""
+  },
+  "src/editor-features.ts": {
+    "mtime": 1792088433.4662523,
+    "ast_hash": "48689a0cfe8ed07db06faefe1edba7f8",
+    "semantic_hash": ""
+  },
+  "src/save-reporter.ts": {
+    "mtime": 1792082809.0399137,
+    "ast_hash": "c3a48bc3b716265cf49ab0c02b47a6a9",
+    "semantic_hash": ""
+  },
+  "src/settings-validate.ts": {
+    "mtime": 1792082791.5118275,
+    "ast_hash": "171553683c04982e5597ebca84e0fce5",
+    "semantic_hash": ""
+  },
+  "src/startup-settings.ts": {
+    "mtime": 1792082796.3581452,
+    "ast_hash": "55ca6cf766fe6cbac4125ee808faf423",
     "semantic_hash": ""
   }
 }

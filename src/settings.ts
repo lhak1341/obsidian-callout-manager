@@ -2,6 +2,7 @@ import { CalloutID } from '&callout';
 import { CalloutSettings } from './callout-settings';
 import { CALLOUT_ALIAS_GROUPS } from './callout-aliases';
 import { IconColorAdjust } from './callout-store';
+import { isPlainObject, isSafeStoredCalloutId, sanitizeCalloutSettings } from './settings-validate';
 
 /**
  * The Callout Manager plugin settings.
@@ -38,35 +39,82 @@ export function defaultSettings(): Settings {
  *
  * @param into The object to migrate into.
  * @param from The settings to migrate from.
+ * @param dropped Collects a description of every stored entry that was discarded as invalid.
  * @returns The merged settings.
  */
-export function migrateSettings(into: Settings, from: Settings | undefined) {
+export function migrateSettings(into: Settings, from: Settings | undefined, dropped: string[] = []) {
 	return Object.assign(into, {
 		...from,
-		callouts: migrateCallouts(from?.callouts, into.callouts),
+		callouts: migrateCallouts(from?.callouts, into.callouts, dropped),
 		// Preserve user's alias customisations; fall back to defaults on first run or bad data.
 		aliasGroups: migrateAliasGroups(from?.aliasGroups, into.aliasGroups),
 		iconColorAdjust: migrateIconColorAdjust(from?.iconColorAdjust, into.iconColorAdjust),
 	});
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	return value != null && typeof value === 'object' && !Array.isArray(value);
+export interface LoadedSettings {
+	settings: Settings;
+	/** Whether the result differs from `raw`, i.e. whether writing it back would change the file. */
+	changed: boolean;
+	/** What was discarded as invalid, e.g. `callouts.settings.note[1].color`; empty for a clean file. */
+	dropped: string[];
+}
+
+/** Key-order-independent JSON, so `changed` reflects content and not how the file happened to be written. */
+function stableJson(value: unknown): string {
+	return JSON.stringify(value, (_key, v: unknown) =>
+		isPlainObject(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v,
+	);
 }
 
 /**
- * Validates persisted `callouts`. A malformed container falls back to `fallback`; within a valid
- * `settings` object, entries that aren't arrays are dropped so one bad entry can't discard (or
- * crash on) its valid siblings.
+ * Turns whatever `loadData()` returned into settings, never throwing. Invalid entries are dropped
+ * one at a time (a bad entry must not discard its siblings) and reported in `dropped`.
  */
-function migrateCallouts(from: unknown, fallback: Settings['callouts']): Settings['callouts'] {
+export function loadSettings(raw: unknown): LoadedSettings {
+	const dropped: string[] = [];
+	let from: unknown = raw;
+	if (raw != null && !isPlainObject(raw)) {
+		dropped.push('<root>');
+		from = undefined;
+	}
+
+	// `migrateSettings` reads only the fields it validates; the object itself is unchecked input here.
+	const settings = migrateSettings(defaultSettings(), isPlainObject(from) ? (from as unknown as Settings) : undefined, dropped);
+	return { settings, changed: stableJson(raw) !== stableJson(settings), dropped };
+}
+
+/**
+ * Validates persisted `callouts`. A malformed container falls back to `fallback`. Inside a valid
+ * one every id and every setting is checked on its own, so one bad entry can't discard (or crash
+ * on) its valid siblings; see `settings-validate.ts` for what counts as bad.
+ */
+function migrateCallouts(from: unknown, fallback: Settings['callouts'], dropped: string[]): Settings['callouts'] {
 	if (!isPlainObject(from)) return fallback;
 	const { custom, settings } = from;
+
+	const keptCustom: string[] = [];
+	if (Array.isArray(custom)) {
+		for (const id of custom) {
+			if (isSafeStoredCalloutId(id)) keptCustom.push(id);
+			else dropped.push(`callouts.custom[${JSON.stringify(id)}]`);
+		}
+	}
+
+	const keptSettings: Settings['callouts']['settings'] = {};
+	if (isPlainObject(settings)) {
+		for (const [id, entries] of Object.entries(settings)) {
+			if (!isSafeStoredCalloutId(id) || !Array.isArray(entries)) {
+				dropped.push(`callouts.settings.${id}`);
+				continue;
+			}
+			keptSettings[id] = sanitizeCalloutSettings(id, entries, dropped);
+		}
+	}
+
 	return {
-		custom: Array.isArray(custom) && custom.every((c) => typeof c === 'string') ? [...custom] : fallback.custom,
-		settings: isPlainObject(settings)
-			? (Object.fromEntries(Object.entries(settings).filter(([, v]) => Array.isArray(v))) as Settings['callouts']['settings'])
-			: fallback.settings,
+		custom: Array.isArray(custom) ? keptCustom : fallback.custom,
+		settings: isPlainObject(settings) ? keptSettings : fallback.settings,
 	};
 }
 

@@ -21,10 +21,12 @@ export class ManageCalloutsPane extends UIPane {
 
 	private listEl: HTMLElement | null = null;
 
-	public constructor(plugin: CalloutStore) {
+	/** @param options.query Pre-fills the filter, e.g. to land on one callout from the editor. */
+	public constructor(plugin: CalloutStore, options: { query?: string } = {}) {
 		super();
 		this.plugin = plugin;
 		this.session = new ManageSession(plugin);
+		if (options.query) this.session.setQuery(options.query);
 	}
 
 	/** Re-reads the callouts and rebuilds the list (not the slider section). */

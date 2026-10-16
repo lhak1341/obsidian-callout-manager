@@ -80,9 +80,9 @@ describe('migrateSettings', () => {
 			expect(result2.aliasGroups).toStrictEqual(defaultSettings().aliasGroups);
 		});
 
-		test('custom with non-string entries falls back to the default list', () => {
+		test('custom drops non-string entries and keeps the valid ones', () => {
 			const result = migrate({ callouts: { custom: ['note', 5], settings: {} } });
-			expect(result.callouts.custom).toStrictEqual([]);
+			expect(result.callouts.custom).toStrictEqual(['note']);
 		});
 
 		test('malformed entries are dropped; valid siblings survive', () => {

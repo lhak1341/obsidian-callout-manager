@@ -65,3 +65,25 @@ Non-obvious call-site-specific traps (why `applyStyles` must stay a closure, why
 `CalloutManagerAPIs.assertV1` matters even with one version, why `isComplex` gates inline
 editing) are commented at their definitions rather than restated here — see `main.ts`,
 `callout-repository.ts`, `apis.ts`, and `src/ui/component/callout-row.ts` respectively.
+
+## Editor integrations
+
+Everything that reads or writes note text is split into a pure module (no `obsidian` import, so it
+is tested under both runners) and a thin Obsidian adapter. Add rules to the pure side.
+
+- `callout-writer.ts` — inserting a callout: `planInsertion` turns a document, a selection and a
+  `CalloutSpec` into one `InsertionEdit`. It owns blank-line separation, quote/list nesting and
+  the "never write into properties" rule; `InsertSession.toInsertion` delegates to it.
+- `callout-block.ts` — a callout already in a note: `findCalloutAt` (innermost, by quote depth),
+  `planUnwrap`, `planFold`, `wrapRange`, `calloutMarkdown`.
+- `callout-trigger.ts` — `[!` autocomplete: `readTrigger` (when to open, fenced-code and
+  properties aware), `choicesFor`, `planPick` (what a pick writes and where the cursor goes).
+- `editor-features.ts` — the only adapter: the wrap/unwrap commands, `CalloutSuggest`
+  (`EditorSuggest`) and the `editor-menu` items. It has no unit tests (no DOM here); verify it live.
+- `startup-settings.ts`, `settings-validate.ts`, `save-reporter.ts` — loading and saving
+  `data.json` safely: entries are validated one at a time, a missing file falls back to
+  `data.backup.json`, a file that lost entries is kept in `data.quarantine.json`, and a failed
+  save is reported once per streak. Saving stays un-debounced (ADR-0002).
+
+Known limits: a fenced code block is not detected when inserting a callout (autocomplete does
+detect it); the right-click menu works in the editor only, not in Reading view.

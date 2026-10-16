@@ -2,6 +2,7 @@ import { Editor, Modal } from 'obsidian';
 
 import { Callout } from '&callout';
 import { getTitleFromCallout } from '&callout-util';
+import { type Selection, selectedBody } from '../callout-writer';
 import { InsertSession } from '../insert-session';
 import { AliasReader, CalloutReader } from '../callout-store';
 import { DEFAULT_ICON_ID } from '../lucide-icons';
@@ -9,19 +10,24 @@ import { renderCalloutGlyph } from '&ui/component/callout-glyph';
 import { CalloutPreviewComponent } from '&ui/component/callout-preview';
 import { attachRovingTabindex, RovingTabindexHandle } from '&ui/component/roving-tabindex';
 
+const selectionOf = (editor: Editor) => ({ from: editor.getCursor('from'), to: editor.getCursor('to') });
+
 export class InsertCalloutModal extends Modal {
 	private readonly session: InsertSession;
 	private readonly editor: Editor | null;
+	/** What the callout replaces. Defaults to the editor's selection; a wrap command passes the lines to wrap. */
+	private readonly selection: Selection | null;
 
 	private gridEl: HTMLElement | null = null;
 	private previewContainer: HTMLElement | null = null;
 
-	public constructor(plugin: CalloutReader & AliasReader, editor: Editor | null) {
+	public constructor(plugin: CalloutReader & AliasReader, editor: Editor | null, selection?: Selection) {
 		super(plugin.app);
 		this.editor = editor;
+		this.selection = editor ? (selection ?? selectionOf(editor)) : null;
 		this.session = new InsertSession(plugin.getCallouts(), {
 			aliasGroups: plugin.getAliasGroups(),
-			initialContent: editor?.getSelection() || undefined,
+			initialContent: (editor && this.selection && selectedBody(editor.getValue().split('\n'), this.selection)) || undefined,
 		});
 	}
 
@@ -213,13 +219,12 @@ export class InsertCalloutModal extends Modal {
 	}
 
 	private doInsert(): void {
-		const { editor } = this;
-		if (editor) {
-			const from = editor.getCursor('from');
-			const insertion = this.session.toInsertion(from);
-			if (insertion) {
-				editor.replaceRange(insertion.text, from, editor.getCursor('to'));
-				editor.setCursor(insertion.cursor.line, insertion.cursor.ch);
+		const { editor, selection } = this;
+		if (editor && selection) {
+			const edit = this.session.toInsertion(editor.getValue().split('\n'), selection);
+			if (edit) {
+				editor.replaceRange(edit.text, edit.from, edit.to);
+				editor.setCursor(edit.cursor.line, edit.cursor.ch);
 			}
 		}
 
