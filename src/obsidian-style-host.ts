@@ -20,6 +20,8 @@ const STYLE_OVERRIDES_ID = 'style-overrides';
 export class ObsidianStyleHost implements StyleHost {
 	private readonly resolver: CalloutResolver;
 	private readonly sheet: CustomStyleSheet;
+	/** Last text written to the `<style>` tag; rewriting identical text still costs a document-wide restyle. */
+	private lastCss: string | null = null;
 
 	public constructor(app: App, plugin: Plugin) {
 		// The resolver needs to exist as early as possible so the Obsidian stylesheet within its
@@ -44,7 +46,11 @@ export class ObsidianStyleHost implements StyleHost {
 	}
 
 	public setCss(css: string): void {
-		this.sheet.css = css;
+		if (css !== this.lastCss) {
+			this.sheet.css = css;
+			this.lastCss = css;
+		}
+		// Always re-seeded: `reloadStyles()` strips the resolver's copy of the override tag.
 		this.resolver.setCustomStyles(css);
 	}
 }

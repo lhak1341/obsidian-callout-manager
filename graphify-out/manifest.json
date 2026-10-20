@@ -55,7 +55,7 @@
     "semantic_hash": "02412869e7fd33261e8003356d339130"
   },
   "manifest.json": {
-    "mtime": 1792088605.688561,
+    "mtime": 1792508874.9153364,
     "ast_hash": "ca1032da7c2e5563c09b8429d61544a7",
     "semantic_hash": ""
   },
@@ -95,8 +95,8 @@
     "semantic_hash": "d40d622dbfe5bab2ae404ff8e1914498"
   },
   "src/callout-repository.ts": {
-    "mtime": 1791768171.117772,
-    "ast_hash": "06232735a06874440a006c0d96ee10a8",
+    "mtime": 1792508818.6951044,
+    "ast_hash": "d267d6f3eb890c82378bd3a4fc3d943f",
     "semantic_hash": ""
   },
   "src/callout-resolver.ts": {
@@ -135,8 +135,8 @@
     "semantic_hash": "52d6cb33ed78605c2b015d569d69e430"
   },
   "src/main.ts": {
-    "mtime": 1792088403.7517297,
-    "ast_hash": "5a48d0fc8efe6b904a1269ceefda6e23",
+    "mtime": 1792508766.9844236,
+    "ast_hash": "c24527a7738f57b8f45a2ad53ba949bc",
     "semantic_hash": ""
   },
   "src/panes/changelog-pane.ts": {
@@ -220,7 +220,7 @@
     "semantic_hash": "a2421e71781eeef10816c9be39010244"
   },
   "versions.json": {
-    "mtime": 1792088605.6886199,
+    "mtime": 1792508874.9153473,
     "ast_hash": "7a53ad9359d0a28455c474d1ea9607b9",
     "semantic_hash": ""
   },
@@ -230,8 +230,8 @@
     "semantic_hash": "43a0f3cbeee4a3b8ca3fb9592351510e"
   },
   "CLAUDE.md": {
-    "mtime": 1787753280.7126005,
-    "ast_hash": "4183f3711a05a1955ee1d615b14797fe",
+    "mtime": 1792509033.769606,
+    "ast_hash": "c0fb852ff31f2a87c529f29e77cb444a",
     "semantic_hash": ""
   },
   "README.md": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "docs/ARCHITECTURE.md": {
-    "mtime": 1792088457.8163786,
-    "ast_hash": "6c45510a173c37ce56a3dcca93e749fe",
+    "mtime": 1792508950.9969802,
+    "ast_hash": "4b9bab1850625f2c2d3ddeca7f6b5cbd",
     "semantic_hash": ""
   },
   "docs/TESTING.md": {
@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "src/obsidian-style-host.ts": {
-    "mtime": 1791767703.0866883,
-    "ast_hash": "a8a389cda4eea91fab45b7c354298fcb",
+    "mtime": 1792508766.983571,
+    "ast_hash": "c51b5025e951eb580940a5a07af34e31",
     "semantic_hash": ""
   },
   "src/row-session.ts": {

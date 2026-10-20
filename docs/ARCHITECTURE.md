@@ -49,7 +49,9 @@ importing `obsidian` there breaks at least one of the two runners.
   canonical via propagation CSS. Route every such change through `CalloutRepository`'s
   `invalidateAndNotify()` (user edits) or `environmentChanged()` (Obsidian-side changes) so the
   whole cache drops and consumers get one `change`; do not invalidate by id. `environmentChanged()`
-  also pins the order: the style host reloads before the CSS is re-seeded.
+  also pins the order: the style host reloads before the CSS is re-seeded. It notifies only when a
+  resolved id/icon/color differs (the public API's `change` event rides on it), and only `css-change`
+  triggers it, not `layout-change` (every tab switch; each round re-clones all stylesheets).
 - `UIPane` (`src/ui/pane.ts`) hosts one pane at a time — no stack, nav, or suspend/restore
   (removed deliberately; see ADR-0001, Superseded). `ManageCalloutsPane` and `ChangelogPane`
   are the only subclasses.

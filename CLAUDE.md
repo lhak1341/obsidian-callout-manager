@@ -21,6 +21,11 @@ correct here) and its version bump (this fork versions independently).
 
 Next review: `bfdf696..upstream/master`.
 
+Also reviewed `obsidian-plugin-callout-studio` (reference copy since deleted). Taken: safe
+settings load/save, tiered icon search, callout writer, `[!` autocomplete, context menu, no
+`layout-change` refresh, byte-compare CSS write, notify-on-diff. Declined (fixed-hex colors, theme
+discovery/claim checks, sync/verified-write/IndexedDB history, i18n, startup CSS snapshot); don't re-propose.
+
 ## Build artifacts
 
 `manifest.json` and `versions.json` are **generated** —

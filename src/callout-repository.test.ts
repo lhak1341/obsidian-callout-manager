@@ -209,11 +209,21 @@ describe('CalloutRepository styles and environment', () => {
 		resolve.mockClear();
 		setCss.mockClear();
 		onChange.mockClear();
+		resolve.mockImplementation(() => ({ color: 'changed', icon: 'icon-note' }));
 		repository.environmentChanged();
 		expect(reloadStyles.mock.invocationCallOrder[0]).toBeLessThan(setCss.mock.invocationCallOrder[0]);
 		repository.getCallouts();
 		expect(resolve).toHaveBeenCalledWith('note');
 		expect(onChange).toHaveBeenCalledTimes(1);
+	});
+
+	test('environmentChanged stays silent when no callout resolves differently', () => {
+		const { repository, onChange } = makeRepository();
+		repository.createCustomCallout('note');
+		repository.getCallouts();
+		onChange.mockClear();
+		repository.environmentChanged();
+		expect(onChange).not.toHaveBeenCalled();
 	});
 
 	test('environmentChanged does not save settings', () => {

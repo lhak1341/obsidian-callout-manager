@@ -197,5 +197,6 @@
   "195": "ManageSession",
   "196": "ManageCalloutsPane",
   "197": "InsertCalloutModal",
-  "198": "color.ts"
+  "198": "color.ts",
+  "199": "ManageSession"
 }

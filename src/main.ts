@@ -45,7 +45,9 @@ export default class CalloutManagerPlugin extends Plugin {
 			save: (data) => this.saveReporter.run(() => this.saveData(data)),
 		});
 
-		// Register a listener for whenever the CSS changes or layout changes (e.g. floating windows open).
+		// Register a listener for whenever the CSS changes.
+		//   Not `layout-change`: it fires on every tab or split change, and each round re-clones every
+		//   document stylesheet. The override <style> re-inserts itself in new windows (obsidian-extra).
 		//   Since the styles for a callout can change, we need to reload the styles in the resolver.
 		//   It's also a good idea to reapply our own styles, since the color scheme or theme could have changed.
 		//   Debounced to avoid redundant reapply calls when multiple events fire in quick succession.
@@ -56,7 +58,6 @@ export default class CalloutManagerPlugin extends Plugin {
 		);
 		this.register(() => reapplyDebounced.cancel());
 		this.registerEvent(this.app.workspace.on('css-change', reapplyDebounced));
-		this.registerEvent(this.app.workspace.on('layout-change', reapplyDebounced));
 
 		// Re-inject icons for callouts where Obsidian skipped icon injection (see IconReinjector).
 		const iconReinjector = new IconReinjector();

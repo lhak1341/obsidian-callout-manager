@@ -25,6 +25,10 @@ export interface CalloutRepositoryAdapters {
 	save: (data: Settings) => void;
 }
 
+function sameCallouts(a: Callout[], b: Callout[]): boolean {
+	return a.length === b.length && a.every((c, i) => c.id === b[i].id && c.icon === b[i].icon && c.color === b[i].color);
+}
+
 export class CalloutRepository implements CalloutStore, CalloutChangeSource {
 	public readonly app: App;
 	private readonly settings: Settings;
@@ -155,9 +159,14 @@ export class CalloutRepository implements CalloutStore, CalloutChangeSource {
 	 * stylesheet is re-seeded, and the cache must drop before consumers are notified.
 	 */
 	public environmentChanged(): void {
+		const before = this.snapshot;
 		this.adapters.style.reloadStyles();
 		this.applyStyles();
 		this.snapshot = null;
+		// Most rounds (a font-size step, an unrelated snippet) resolve to the same icons and colors;
+		// consumers (the public API's `change` event included) only hear about real differences.
+		// A null snapshot was never read since the last notify, so there is nothing to compare.
+		if (before !== null && sameCallouts(before, this.getCallouts())) return;
 		this.notify();
 	}
 
