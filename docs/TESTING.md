@@ -51,3 +51,5 @@ Run `bun run test` (jest) **and** `bun test` (bun runner) — separate mocks, th
   pass `app.workspace.trigger('editor-menu', fakeMenu, editor, view)` a stand-in with
   `addItem(cb)` (cb gets `{setTitle, setIcon, setSection, onClick}`) and `addSeparator()`;
   it only reads the note.
+- A `Modal` subclass field shares a namespace with internals Obsidian sets at runtime and `obsidian.d.ts` omits: `Modal.open()` assigns `this.selection` (the DOM selection), clobbering a field of that name with no type error — Insert silently threw. Name own fields distinctively (`range`); no jest test can catch it (no DOM).
+- A live check of a command that edits the note changes the user's open file: snapshot `editor.getValue()` and `setValue` it back, and close modals earlier probes left open. `obsidian dev:errors` prints the stack of a click handler that threw (the click itself returns no error).

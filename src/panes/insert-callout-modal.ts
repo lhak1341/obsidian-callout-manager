@@ -15,8 +15,8 @@ const selectionOf = (editor: Editor) => ({ from: editor.getCursor('from'), to: e
 export class InsertCalloutModal extends Modal {
 	private readonly session: InsertSession;
 	private readonly editor: Editor | null;
-	/** What the callout replaces. Defaults to the editor's selection; a wrap command passes the lines to wrap. */
-	private readonly selection: Selection | null;
+	/** Not `selection`: Obsidian's `Modal.open()` assigns that name (the DOM selection), clobbering ours. What the callout replaces. Defaults to the editor's selection; a wrap command passes the lines to wrap. */
+	private readonly range: Selection | null;
 
 	private gridEl: HTMLElement | null = null;
 	private previewContainer: HTMLElement | null = null;
@@ -24,10 +24,10 @@ export class InsertCalloutModal extends Modal {
 	public constructor(plugin: CalloutReader & AliasReader, editor: Editor | null, selection?: Selection) {
 		super(plugin.app);
 		this.editor = editor;
-		this.selection = editor ? (selection ?? selectionOf(editor)) : null;
+		this.range = editor ? (selection ?? selectionOf(editor)) : null;
 		this.session = new InsertSession(plugin.getCallouts(), {
 			aliasGroups: plugin.getAliasGroups(),
-			initialContent: (editor && this.selection && selectedBody(editor.getValue().split('\n'), this.selection)) || undefined,
+			initialContent: (editor && this.range && selectedBody(editor.getValue().split('\n'), this.range)) || undefined,
 		});
 	}
 
@@ -219,9 +219,9 @@ export class InsertCalloutModal extends Modal {
 	}
 
 	private doInsert(): void {
-		const { editor, selection } = this;
-		if (editor && selection) {
-			const edit = this.session.toInsertion(editor.getValue().split('\n'), selection);
+		const { editor, range } = this;
+		if (editor && range) {
+			const edit = this.session.toInsertion(editor.getValue().split('\n'), range);
 			if (edit) {
 				editor.replaceRange(edit.text, edit.from, edit.to);
 				editor.setCursor(edit.cursor.line, edit.cursor.ch);
